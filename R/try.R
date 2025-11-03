@@ -17,7 +17,7 @@ say("  - sigma dim: %d x %d", nrow(fit$sigma), ncol(fit$sigma))
 say("Step 2: Conditional prediction (pick a few genes from the fit)...")
 genes   <- fit$features
 target  <- genes[5]
-knocked <- genes[2:3]
+knocked <- genes[c(3, 7, 9)]
 say("  - target:  %s", target)
 say("  - knocked: %s", paste(knocked, collapse = ", "))
 
@@ -39,7 +39,7 @@ plots <- plot_partner_knockout_densities_dual(
   fit,
   target  = target,
   knocked = knocked,
-  k = 15,                     # how many partners per plot
+  k = 20,                     # how many partners per plot
   use_original_units = TRUE   # or FALSE to work on correlation scale
 )
 

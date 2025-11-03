@@ -77,12 +77,7 @@ sweep_partner_knockouts <- function(Sigma,
   list(mean = means, var = vars)
 }
 
-#' 3D density plots from a glasso fit, ranked by mean and by variance
-#'
-#' Takes a glasso-style fit list and produces two 3D plots:
-#' (1) top-K partners by conditional mean and (2) top-K partners by conditional variance.
-#' Each plot shows the Normal pdf of the target under knockout set {knocked ∪ g}
-#' for each selected partner g.
+#' 3D density plots from a glasso fit, ranked by mean and by variance (colored by magnitude)
 #'
 #' @param fit List from run_glasso_seurat()/fit_glasso() (needs $sigma, $features; for
 #'   original units also needs $sd, and optionally $mu).
@@ -128,8 +123,31 @@ plot_partner_knockout_densities_dual <- function(
   v_all <- as.numeric(sv$var)
   sd_all <- sqrt(pmax(v_all, 0))
 
-  # Helper to build a plot given chosen partner indices
-  .build_plot <- function(partners, m, sd, title_suffix) {
+  # color mapper (0..1 -> hex)
+  .mk_mapper <- function() {
+    if (requireNamespace("viridisLite", quietly = TRUE)) {
+      ramp <- grDevices::colorRamp(viridisLite::viridis(256))
+    } else {
+      ramp <- grDevices::colorRamp(c("#2166AC", "#F4A582", "#B2182B")) # blue→salmon→red
+    }
+    function(x01) {
+      x01 <- pmin(pmax(x01, 0), 1)
+      rgb <- ramp(x01)
+      grDevices::rgb(rgb[,1], rgb[,2], rgb[,3], maxColorValue = 255)
+    }
+  }
+  map_col <- .mk_mapper()
+
+  # Plot builder with per-trace colors by a magnitude vector
+  .build_plot <- function(partners, m, sd, mag, title_suffix) {
+    # normalize magnitudes for color mapping
+    mag01 <- if (length(unique(mag)) > 1) {
+      (mag - min(mag, na.rm = TRUE)) / (max(mag, na.rm = TRUE) - min(mag, na.rm = TRUE))
+    } else {
+      rep(0.5, length(mag))
+    }
+    cols <- map_col(mag01)
+
     # x-range
     if (is.null(xlim)) {
       x_min <- min(m - 4 * sd); x_max <- max(m + 4 * sd)
@@ -152,8 +170,8 @@ plot_partner_knockout_densities_dual <- function(
         z = dens,
         type = "scatter3d",
         mode = "lines",
-        name = sprintf("%s (sd=%.3f)", partners[i], sd[i]),
-        line = list(width = 4)
+        name = sprintf("%s | mean=%.3f sd=%.3f", partners[i], m[i], sd[i]),
+        line = list(width = 4, color = cols[i])
       )
     }
     targ_name <- if (is.numeric(target)) genes[target] else target
@@ -168,27 +186,30 @@ plot_partner_knockout_densities_dual <- function(
                      ticktext = partners),
         zaxis = list(title = "Density f(x)")
       ),
-      legend = list(title = list(text = "Partner (sd)"))
+      legend = list(title = list(text = "Partner (color = magnitude)"))
     )
   }
 
-  # Select top-K by mean (largest means) and by variance (largest variances)
-  ord_mean <- order(m_all, decreasing = TRUE)
+  # Top-K by |mean|
+  ord_mean <- order(abs(m_all), decreasing = TRUE)
   idx_mean <- ord_mean[seq_len(min(k, length(ord_mean)))]
   mean_plot <- .build_plot(
     partners = partners_all[idx_mean],
-    m = m_all[idx_mean],
+    m  = m_all[idx_mean],
     sd = sd_all[idx_mean],
-    title_suffix = "(top-K by conditional mean)"
+    mag = abs(m_all[idx_mean]),                         # color by |mean|
+    title_suffix = "(top-K by |conditional mean|; color = |mean|)"
   )
 
+  # Top-K by variance
   ord_var <- order(v_all, decreasing = TRUE)
   idx_var <- ord_var[seq_len(min(k, length(ord_var)))]
   var_plot <- .build_plot(
     partners = partners_all[idx_var],
-    m = m_all[idx_var],
+    m  = m_all[idx_var],
     sd = sd_all[idx_var],
-    title_suffix = "(top-K by conditional variance)"
+    mag = v_all[idx_var],                               # color by variance
+    title_suffix = "(top-K by conditional variance; color = variance)"
   )
 
   list(mean_plot = mean_plot, var_plot = var_plot)
