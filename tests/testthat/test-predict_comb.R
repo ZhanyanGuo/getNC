@@ -1,5 +1,3 @@
-# tests/testthat/test-conditional.R
-
 test_that("predict_conditional_knockout works with names and indices", {
   # simple PD correlation matrix (3x3)
   R <- matrix(c(1, 0.2, -0.1,

@@ -186,7 +186,7 @@ fit_glasso <- function(obj = NULL,
     stop("fit_glasso() expects a Seurat object or NULL (to use example data).")
   }
 
-  # QC + optional normalization
+  # QC + normalization
   obj <- preprocess_seurat_data(
     obj,
     min_genes = min_genes,
