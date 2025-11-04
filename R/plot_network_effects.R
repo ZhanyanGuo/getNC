@@ -1,7 +1,7 @@
 #' Sweep partner knockouts for a single target
 #'
 #' For each candidate partner gene g (excluding the target and already-knocked genes),
-#' compute E[target | knocked ∪ {g} = 0] and Var[target | knocked ∪ {g} = 0].
+#' compute Expectation target | (knocked ∪ {g}) = 0. and Var target | (knocked ∪ {g}) = 0.
 #' Inputs mirror `predict_conditional_knockout()`.
 #'
 #' @param Sigma Covariance matrix (features x features).

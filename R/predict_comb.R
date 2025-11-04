@@ -1,6 +1,6 @@
 #' Conditional prediction for combinational knockouts
 #'
-#' Compute E[target | knocked=0] and Var[target | knocked=0] given
+#' Compute Expectation target | knocked=0 and Var target | knocked=0 given
 #' a covariance matrix and gene names.
 #'
 #' @param Sigma Covariance matrix of the Gaussian model (features x features).
@@ -103,7 +103,7 @@ recover_covariance <- function(fit, renormalize = TRUE) {
 #' Predict conditional mean/covariance from a glasso-style fit
 #'
 #' Uses a fit list produced by `run_glasso_seurat()` / `fit_glasso()`
-#' to compute E[target | knocked=0] and Var[target | knocked=0].
+#' to compute Expectation target | knocked=0 and Var target | knocked=0.
 #' You can choose to work on original units (recover covariance via sd)
 #' or on the correlation scale.
 #'

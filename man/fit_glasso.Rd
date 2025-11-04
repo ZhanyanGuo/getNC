@@ -18,31 +18,34 @@ fit_glasso(
 \arguments{
 \item{obj}{Seurat object or NULL.}
 
-\item{min_genes}{minimum genes per cell for QC.}
+\item{min_genes}{Minimum genes per cell for QC.}
 
-\item{max_genes}{maximum genes per cell for QC.}
+\item{max_genes}{Maximum genes per cell for QC.}
 
-\item{max_mt}{maximum mitochondrial percent for QC.}
+\item{max_mt}{Maximum mitochondrial percent for QC.}
 
-\item{normalize}{logical, whether to run Seurat::NormalizeData().}
+\item{normalize}{Logical; whether to run \code{Seurat::NormalizeData()}.}
 
-\item{sf}{scale factor for normalization.}
+\item{sf}{Scale factor for normalization.}
 
-\item{nfeatures}{number of variable features to use for glasso.}
+\item{nfeatures}{Number of variable features to use for glasso.}
 
-\item{rho}{regularization parameter for glasso.}
+\item{rho}{Regularization parameter for glasso.}
 }
 \value{
-list with precision, covariance, features, and glasso fit.
+A list (from \code{run_glasso_seurat()}) with:
+\itemize{
+\item \code{omega}: precision matrix (inverse covariance)
+\item \code{sigma}: covariance matrix
+\item \code{mu}: per-gene means (order matches \code{features})
+\item \code{sd}: per-gene standard deviations (order matches \code{features})
+\item \code{features}: character vector of genes used
+\item \code{glasso}: the raw \code{glasso} fit object
+}
 }
 \description{
-This is a high-level wrapper that
-\enumerate{
-\item preprocesses a Seurat object (QC + optional normalize)
-\item runs graphical lasso on variable, z-scored features.
-}
-}
-\details{
-If \code{obj} is NULL, it will load the example dataset shipped with the
-package (e.g. \code{pbmc_small}) and run on that.
+This high-level wrapper (1) preprocesses a Seurat object (QC + optional
+normalization) and (2) runs graphical lasso on variable, z-scored features.
+If \code{obj} is NULL, it loads a small example dataset shipped with the
+package (e.g., \code{pbmc_small}) and runs on that.
 }

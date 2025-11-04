@@ -7,24 +7,34 @@
 run_glasso_seurat(obj, nfeatures = 2000, rho = 0.1)
 }
 \arguments{
-\item{obj}{Seurat object that has already been normalized
-(i.e. \code{Seurat::NormalizeData()} has been run).}
+\item{obj}{A Seurat object that has already been normalized
+(e.g., via \code{Seurat::NormalizeData()}).}
 
-\item{nfeatures}{Number of variable features to use (default 2000).}
+\item{nfeatures}{Integer. Number of variable features to use (default 2000).}
 
-\item{rho}{Regularization parameter for \code{glasso::glasso()}.}
+\item{rho}{Numeric. \eqn{\ell_1} regularization parameter for
+\code{glasso::glasso()}.}
 }
 \value{
-A list with:
+A list with components:
 \itemize{
-\item \code{omega}: precision matrix (inverse covariance)
-\item \code{sigma}: covariance matrix
-\item \code{features}: character vector of genes used
-\item \code{glasso}: the raw glasso fit object
+\item \code{omega}: estimated precision matrix (inverse covariance) for the selected features.
+\item \code{sigma}: estimated covariance matrix for the selected features.
+\item \code{mu}: numeric vector of per-gene means (order matches \code{features}).
+\item \code{sd}: numeric vector of per-gene standard deviations (order matches \code{features}).
+\item \code{features}: character vector of feature (gene) names used.
+\item \code{glasso}: the raw \code{glasso} fit object.
 }
 }
 \description{
-This is a convenience wrapper that (1) selects variable features,
-(2) z-scores them, and (3) fits a sparse Gaussian graphical model
-using glasso. It is meant for single-cell data stored in a Seurat object.
+This wrapper selects variable features, records per-gene mean and standard
+deviation from the normalized expression, produces a z-scored matrix for
+those features, and fits a sparse Gaussian graphical model via
+\code{glasso::glasso()}.
+}
+\details{
+Variable features are selected with \code{Seurat::FindVariableFeatures()}.
+Per-gene mean (\code{mu}) and standard deviation (\code{sd}) are computed from the
+normalized (unscaled) expression for the selected features. The covariance
+matrix used by glasso is computed from the z-scored matrix of those features.
 }

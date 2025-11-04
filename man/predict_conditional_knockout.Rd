@@ -4,26 +4,23 @@
 \alias{predict_conditional_knockout}
 \title{Conditional prediction for combinational knockouts}
 \usage{
-predict_conditional_knockout(fit, target, knocked, mu = NULL)
+predict_conditional_knockout(Sigma, genes, target, knocked, mu = NULL)
 }
 \arguments{
-\item{fit}{list returned by \code{fit_glasso()} or \code{run_glasso_seurat()},
-must contain \code{$sigma} and \code{$features}.}
+\item{Sigma}{Covariance matrix of the Gaussian model (features x features).}
 
-\item{target}{character or integer vector giving the genes to predict.}
+\item{genes}{Character vector of feature (gene) names aligned with Sigma.}
 
-\item{knocked}{character or integer vector giving the genes that are set to 0.}
+\item{target}{Character or integer vector: genes to predict.}
 
-\item{mu}{optional mean vector (same order as \code{fit$features}). If NULL,
-0 is assumed for all genes.}
+\item{knocked}{Character or integer vector: genes fixed to 0.}
+
+\item{mu}{Optional mean vector (same order as \code{genes}). If NULL, zeros are used.}
 }
 \value{
 list with \code{mean_cond} and \code{cov_cond}.
 }
 \description{
-This function takes the covariance and feature names from a fitted
-Gaussian model (the output of \code{fit_glasso()} or
-\code{run_glasso_seurat()}) and computes the conditional mean and
-covariance of a set of target genes, given that another set of genes
-is forced to 0 (knocked out).
+Compute Expectation target | knocked=0 and Var target | knocked=0 given
+a covariance matrix and gene names.
 }

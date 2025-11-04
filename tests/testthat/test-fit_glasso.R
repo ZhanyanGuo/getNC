@@ -28,24 +28,6 @@ test_that("preprocess_seurat_data filters and normalizes", {
   }
 })
 
-test_that("zscore_seurat returns matrix with selected features", {
-  skip_if_not_installed("Seurat")
-  skip_if_not_installed("Matrix")
-
-  m <- Matrix::Matrix(rpois(3000, 5), nrow = 300, ncol = 20, sparse = TRUE)
-  rownames(m) <- paste0("G", 1:300)
-  colnames(m) <- paste0("cell", 1:20)
-
-  obj <- Seurat::CreateSeuratObject(m)
-  obj <- Seurat::NormalizeData(obj)
-
-  zmat <- zscore_seurat(obj, nfeatures = 50)
-
-  expect_true(is.matrix(zmat))
-  expect_equal(nrow(zmat), 50)
-  expect_equal(ncol(zmat), ncol(obj))
-})
-
 test_that("run_glasso_seurat returns glasso output incl. mu/sd", {
   skip_if_not_installed("Seurat")
   skip_if_not_installed("glasso")
