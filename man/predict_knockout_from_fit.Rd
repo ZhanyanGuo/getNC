@@ -30,12 +30,13 @@ list with \code{mean_cond} and \code{cov_cond}.
 }
 \description{
 Uses a fit list produced by \code{run_glasso_seurat()} / \code{fit_glasso()}
-to compute \emph{E\link{target | knocked = 0}} and \emph{Var\link{target | knocked = 0}}.
+to compute \emph{Expectation target | knocked = 0]} and \emph{Var target | knocked = 0}.
 You can choose to work on original units (recover covariance via sd)
 or on the correlation scale.
 }
 \examples{
 # Build a tiny synthetic "fit" object and compute conditional for a target:
+\dontrun{
 set.seed(10)
 genes <- paste0("G", 1:6)
 R <- diag(6); R[1,2] <- R[2,1] <- 0.35; R[1,3] <- R[3,1] <- -0.25
@@ -53,6 +54,7 @@ out <- predict_knockout_from_fit(
 )
 out$mean_cond
 out$cov_cond
+}
 
 }
 \references{

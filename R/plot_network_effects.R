@@ -152,6 +152,7 @@ sweep_partner_knockouts <- function(Sigma,
 #'   Wiley.
 #'
 #' @importFrom stats dnorm cov2cor
+#' @import plotly
 #' @export
 plot_partner_knockout_densities_dual <- function(
   fit, target, knocked = character(0),

@@ -21,7 +21,7 @@ predict_conditional_knockout(Sigma, genes, target, knocked, mu = NULL)
 list with \code{mean_cond} and \code{cov_cond}.
 }
 \description{
-Compute \emph{E\link{target | knocked = 0}} and \emph{Var\link{target | knocked = 0}} given
+Compute \emph{Expectation target | knocked = 0} and \emph{Var target | knocked = 0} given
 a covariance matrix and gene names under a multivariate Normal model.
 }
 \examples{

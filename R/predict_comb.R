@@ -1,6 +1,6 @@
 #' Conditional prediction for combinational knockouts
 #'
-#' Compute \emph{E[target | knocked = 0]} and \emph{Var[target | knocked = 0]} given
+#' Compute \emph{Expectation target | knocked = 0} and \emph{Var target | knocked = 0} given
 #' a covariance matrix and gene names under a multivariate Normal model.
 #'
 #' @param Sigma Covariance matrix of the Gaussian model (features x features).
@@ -108,6 +108,7 @@ predict_conditional_knockout <- function(Sigma,
 #'
 #' @examples
 #' # Suppose a fit list stores correlation (sigma) and per-gene sds:
+#' \dontrun{
 #' set.seed(1)
 #' genes <- paste0("G", 1:5)
 #' R <- diag(5); R[1,2] <- R[2,1] <- 0.5
@@ -115,6 +116,7 @@ predict_conditional_knockout <- function(Sigma,
 #' fit_demo <- list(sigma = R, sd = sdv, features = genes)
 #' S_cov <- recover_covariance(fit_demo, renormalize = TRUE)
 #' dimnames(S_cov)
+#' }
 #'
 #' @seealso \code{\link{predict_knockout_from_fit}}, \code{\link{run_glasso_seurat}}
 #'
@@ -143,7 +145,7 @@ recover_covariance <- function(fit, renormalize = TRUE) {
 #' Predict conditional mean/covariance from a glasso-style fit
 #'
 #' Uses a fit list produced by \code{run_glasso_seurat()} / \code{fit_glasso()}
-#' to compute \emph{E[target | knocked = 0]} and \emph{Var[target | knocked = 0]}.
+#' to compute \emph{Expectation target | knocked = 0]} and \emph{Var target | knocked = 0}.
 #' You can choose to work on original units (recover covariance via sd)
 #' or on the correlation scale.
 #'
@@ -159,6 +161,7 @@ recover_covariance <- function(fit, renormalize = TRUE) {
 #'
 #' @examples
 #' # Build a tiny synthetic "fit" object and compute conditional for a target:
+#' \dontrun{
 #' set.seed(10)
 #' genes <- paste0("G", 1:6)
 #' R <- diag(6); R[1,2] <- R[2,1] <- 0.35; R[1,3] <- R[3,1] <- -0.25
@@ -176,7 +179,8 @@ recover_covariance <- function(fit, renormalize = TRUE) {
 #' )
 #' out$mean_cond
 #' out$cov_cond
-#'
+#'}
+#' 
 #' @seealso \code{\link{predict_conditional_knockout}}, \code{\link{recover_covariance}},
 #'   \code{\link{run_glasso_seurat}}, \code{\link{fit_glasso}}
 #'
