@@ -53,6 +53,7 @@ fit <- fit_glasso(
   rho = 0.2
 )
 
+# check the dimentions of fit if needed
 cat(sprintf("features: %d\n", length(fit$features)))
 cat(sprintf("omega dim: %d x %d\n", nrow(fit$omega), ncol(fit$omega)))
 cat(sprintf("sigma dim: %d x %d\n", nrow(fit$sigma), ncol(fit$sigma)))
@@ -80,6 +81,7 @@ res <- predict_knockout_from_fit(
 mu_c  <- as.numeric(res$mean_cond[1])
 var_c <- as.numeric(res$cov_cond[1, 1])
 
+# print the needed results
 cat(sprintf("target: %s\n", target))
 cat(sprintf("knocked: %s\n", paste(knocked, collapse = ", ")))
 cat(sprintf("E[target | knocked=0] = %.4f\n", mu_c))
@@ -94,22 +96,21 @@ We look at partner genes. For each partner \(g\), we predict the target distribu
 under \(\{\text{knocked} \cup g\}\).  
 We show two plots: top-K partners by conditional **mean** and by conditional **variance**.
 
-```{r, results='hold'}
-if (requireNamespace("plotly", quietly = TRUE)) {
-  plots <- plot_partner_knockout_densities_dual(
-    fit,
-    target = target,
-    knocked = knocked,
-    k = 15,
-    use_original_units = TRUE
-  )
-  plots$mean_plot
-  plots$var_plot
-} else {
-  cat("plotly not installed; skipping 3D plots.\n")
-}
-```
+```{r}
+plots <- plot_partner_knockout_densities_dual(
+  fit,
+  target = target,
+  knocked = knocked,
+  k = 15,
+  use_original_units = TRUE
+)
 
+# To view Plots use
+# plots$mean_plot
+# plots$var_plot
+
+knitr::include_graphics("figures/1.png")
+```
 ---
 
 # Step 3 — Validate with synthetic knockout measurements
@@ -133,6 +134,7 @@ val <- validate_knockout_group_from_fit(
   use_original_units = TRUE
 )
 
+# To see the P value for each test
 cat("Validation results:\n")
 cat(sprintf("  p_mean (mean, t)   = %.4g\n", val$p_mean))
 cat(sprintf("  p_chisq (variance)  = %.4g\n", val$p_chisq))
@@ -145,21 +147,7 @@ cat(sprintf("  n (replicates)      = %d\n", val$n))
 - A small `p_mean` suggests the **mean** is off.
 - A small `p_chisq` suggests the **variance** is off.
 
-You can try changing the data to see sensitivity:
-
-### Mean shift
-
-```{r}
-y_shift <- rnorm(40, mean = mu_c + 1, sd = sd_c)
-validate_knockout_group_from_fit(fit, target, knocked, y_shift)
-```
-
-### Variance inflation
-
-```{r}
-y_inflate <- rnorm(40, mean = mu_c, sd = sd_c * 2)
-validate_knockout_group_from_fit(fit, target, knocked, y_inflate)
-```
+You can try changing the data to see sensitivity
 
 ---
 
@@ -203,6 +191,11 @@ In our knockout setting we take \(x_b = 0\).
 
 Marginalizing (taking only a subset) just selects the corresponding block of \(\mu\) and \(\Sigma\).
 For example, the marginal of \(X_a\) is \(\mathcal{N}(\mu_a, \Sigma_{aa})\).
+
+---
+
+# Generative AI usage
+This vignette is built partly with Chat-gpt 5 for term correction and formalization.
 
 ---
 

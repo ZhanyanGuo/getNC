@@ -8,8 +8,30 @@
 #' @param mu  scalar mean under H0.
 #' @param var scalar variance under H0 (>= 0) used only for the chi-square part.
 #'
-#' @return named numeric vector: c(p_tmean = ..., p_chisq = ...)
+#' @return named numeric vector: c(p_mean = ..., p_chisq = ...)
+#'
+#' @examples
+#' \dontrun{
+#'   # Synthetic data under N(0, 1)
+#'   set.seed(1)
+#'   y <- rnorm(30, mean = 0, sd = 1)
+#'   pv <- gaussian_1d_group_pvals(y, mu = 0, var = 1)
+#'   print(pv)
+#' }
+#'
+#' @references
+#'   Student (1908). "The probable error of a mean." \emph{Biometrika}, 6(1), 1–25.
+#'
+#'   Fisher, R.A. (1924). "On a distribution yielding the error functions of
+#'   several well known statistics." \emph{Proceedings of the International
+#'   Congress of Mathematics}, 2, 805–813. (Chi-square usage)
+#'
+#'   Casella, G. & Berger, R.L. (2002). \emph{Statistical Inference} (2nd ed.).
+#'   Duxbury. (Classical t and chi-square results)
+#'
 #' @keywords internal
+#' @noRd
+#' @importFrom stats var pchisq pt rnorm
 gaussian_1d_group_pvals <- function(y, mu, var) {
   y <- as.numeric(y)
   if (!length(y)) stop("`y` must have at least one value.")
@@ -47,8 +69,8 @@ gaussian_1d_group_pvals <- function(y, mu, var) {
 #' For a single target gene and a set of knocked genes, compute the model's
 #' conditional Normal N(mu_cond, var_cond) from `fit`, then evaluate a vector
 #' of observations `y` with two omnibus p-values:
-#'  - p_mean  : t test on mean(z), two-sided
-#'  - p_chisq : Chi-square test on sum(z^2), two-sided
+#'  - p_mean  : two-sided t test on the sample mean (using the sample sd)
+#'  - p_chisq : two-sided chi-square test on sum((y - mu_cond)^2 / var_cond)
 #'
 #' @param fit   List from run_glasso_seurat()/fit_glasso() (needs $sigma, $features;
 #'              for original units also needs $sd and optionally $mu).
@@ -65,10 +87,67 @@ gaussian_1d_group_pvals <- function(y, mu, var) {
 #'     \item{knocked}{character vector of knocked genes}
 #'     \item{mean_cond}{scalar conditional mean from the model}
 #'     \item{var_cond}{scalar conditional variance from the model}
-#'     \item{p_mean}{two-sided t test p-value on mean(z)}
-#'     \item{p_chisq}{two-sided Chi-square test p-value on sum(z^2)}
+#'     \item{p_mean}{two-sided t test p-value on mean}
+#'     \item{p_chisq}{two-sided Chi-square test p-value on sum of squares}
 #'     \item{n}{number of observations}
 #'   }
+#'
+#' @examples
+#' \dontrun{
+#'   suppressPackageStartupMessages(library(getNC))
+#'
+#'   # 1) Fit a model using the packaged example data
+#'   fit <- fit_glasso(obj = NULL, nfeatures = 100, rho = 0.2)
+#'
+#'   genes   <- fit$features
+#'   target  <- genes[5]
+#'   knocked <- genes[c(3, 7, 9)]
+#'
+#'   # 2) Pull the conditional distribution for target | knocked=0
+#'   cond <- predict_knockout_from_fit(
+#'     fit, target = target, knocked = knocked, use_original_units = TRUE
+#'   )
+#'   mu_c  <- as.numeric(cond$mean_cond[1])
+#'   var_c <- as.numeric(cond$cov_cond[1, 1])
+#'
+#'   # 3) Simulate replicate measurements under that model
+#'   # in practice, use knockout experiment 1D RNA counting vector
+#'   set.seed(42)
+#'   y_obs <- rnorm(40, mean = mu_c, sd = sqrt(max(var_c, 0)))
+#'
+#'   # 4) Validate (t-mean + chi-square)
+#'   res <- validate_knockout_group_from_fit(
+#'     fit, target = target, knocked = knocked, y = y_obs, use_original_units = TRUE
+#'   )
+#'   str(res)
+#'   cat(sprintf("p_mean = %.3g, p_chisq = %.3g\n", res$p_mean, res$p_chisq))
+#' }
+#'
+#' @seealso
+#'   \code{\link{fit_glasso}}, \code{\link{run_glasso_seurat}},
+#'   \code{\link{predict_knockout_from_fit}}, \code{\link{recover_covariance}}
+#'
+#' @references
+#'   Friedman, J., Hastie, T., & Tibshirani, R. (2008).
+#'   Sparse inverse covariance estimation with the graphical lasso.
+#'   \emph{Biostatistics}, 9(3), 432–441. \doi{10.1093/biostatistics/kxm045}
+#'
+#'   Hao, Y., Hao, S., Andersen-Nissen, E., et al. (2021).
+#'   Integrated analysis of multimodal single-cell data.
+#'   \emph{Cell}, 184(13), 3573–3587. \doi{10.1016/j.cell.2021.04.048}
+#'
+#'   Bishop, C. M. (2006). \emph{Pattern Recognition and Machine Learning}.
+#'   Springer. (Multivariate Normal conditioning identities)
+#'
+#'   Murphy, K. P. (2012). \emph{Machine Learning: A Probabilistic Perspective}.
+#'   MIT Press. (Conditioning and marginalization in Gaussians)
+#'
+#'   Student (1908). "The probable error of a mean." \emph{Biometrika}, 6(1), 1–25.
+#'
+#'   Fisher, R.A. (1924). "On a distribution yielding the error functions of
+#'   several well known statistics." \emph{Proceedings of the ICM}, 2, 805–813.
+#'
+#' @importFrom stats rnorm
 #' @export
 validate_knockout_group_from_fit <- function(
   fit,
@@ -113,3 +192,5 @@ validate_knockout_group_from_fit <- function(
     n         = length(as.numeric(y))
   )
 }
+
+# Gen Ai used for documentation and input verify

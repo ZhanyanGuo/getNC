@@ -31,7 +31,29 @@ list with two named numeric vectors (same names/order):
 }
 }
 \description{
-For each candidate partner gene g (excluding the target and already-knocked genes),
-compute Expectation target | (knocked ∪ {g}) = 0. and Var target | (knocked ∪ {g}) = 0.
-Inputs mirror \code{predict_conditional_knockout()}.
+For each candidate partner gene \code{g} (excluding the target and already-knocked genes),
+compute \eqn{\mathbb{E}[ \text{target} \mid (\text{knocked} \cup \{g\}) = 0 ]} and
+\eqn{\mathrm{Var}[ \text{target} \mid (\text{knocked} \cup \{g\}) = 0 ]}.
+Inputs mirror \code{\link{predict_conditional_knockout}}.
+}
+\examples{
+# Minimal synthetic example (3 genes): target = G1; knock out G2 or G3
+set.seed(1)
+genes  <- c("G1","G2","G3")
+R      <- matrix(c(1, 0.3, -0.2,
+                   0.3, 1,   0.1,
+                  -0.2, 0.1, 1), 3, 3, dimnames = list(genes, genes))
+sdv    <- c(1.0, 0.8, 1.2)
+Sigma  <- diag(sdv) \%*\% R \%*\% diag(sdv)  # covariance in original units
+out    <- sweep_partner_knockouts(Sigma, genes, target = "G1", knocked = "G2", mu = c(0,0,0))
+str(out)
+
+}
+\references{
+Anderson, T.W. (2003). \emph{An Introduction to Multivariate Statistical Analysis} (3rd ed.).
+Wiley. (Conditional Normal formulae)
+Mardia, K.V., Kent, J.T., & Bibby, J.M. (1979). \emph{Multivariate Analysis}. Academic Press.
+}
+\seealso{
+\code{\link{predict_conditional_knockout}}
 }

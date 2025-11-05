@@ -49,3 +49,21 @@ normalization) and (2) runs graphical lasso on variable, z-scored features.
 If \code{obj} is NULL, it loads a small example dataset shipped with the
 package (e.g., \code{pbmc_small}) and runs on that.
 }
+\examples{
+\donttest{
+if (requireNamespace("Seurat", quietly = TRUE) &&
+    requireNamespace("glasso", quietly = TRUE)) {
+  # Use internal example when obj = NULL (expects pbmc_small bundled in package)
+  fit <- fit_glasso(obj = NULL, nfeatures = 50, rho = 0.15)
+  names(fit)
+}
+}
+
+}
+\references{
+Hao, Y. et al. (2021). Integrated analysis of multimodal single-cell data.
+\emph{Cell} 184(13):3573–3587.
+Friedman, J., Hastie, T., & Tibshirani, R. (2008).
+Sparse inverse covariance estimation with the graphical lasso.
+\emph{Biostatistics}, 9(3), 432–441.
+}

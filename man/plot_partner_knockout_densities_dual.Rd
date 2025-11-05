@@ -16,8 +16,8 @@ plot_partner_knockout_densities_dual(
 )
 }
 \arguments{
-\item{fit}{List from run_glasso_seurat()/fit_glasso() (needs $sigma, $features; for
-original units also needs $sd, and optionally $mu).}
+\item{fit}{List from \code{run_glasso_seurat()}/\code{fit_glasso()} (needs \code{$sigma}, \code{$features};
+for original units also needs \code{$sd}, and optionally \code{$mu}).}
 
 \item{target}{Single gene (name or index) to predict.}
 
@@ -25,9 +25,9 @@ original units also needs $sd, and optionally $mu).}
 
 \item{k}{Integer, how many partners to plot for each ranking (default 15).}
 
-\item{use_original_units}{TRUE to recover covariance via sd (Σ = D R D). If FALSE, use corr scale.}
+\item{use_original_units}{TRUE to recover covariance via sd (\eqn{\Sigma = D R D}). If FALSE, use corr scale.}
 
-\item{renormalize}{TRUE to cov2cor(fit$sigma) before scaling when recovering Σ.}
+\item{renormalize}{TRUE to \code{cov2cor(fit$sigma)} before scaling when recovering \eqn{\Sigma}.}
 
 \item{xlim}{Optional length-2 numeric x-range for the pdf curves; NULL = auto.}
 
@@ -37,5 +37,44 @@ original units also needs $sd, and optionally $mu).}
 list(mean_plot = plotly_object, var_plot = plotly_object)
 }
 \description{
-3D density plots from a glasso fit, ranked by mean and by variance (colored by magnitude)
+Produces two interactive 3D line plots (via plotly): top-K partners ranked by
+\code{|conditional mean|} and top-K partners ranked by \code{conditional variance}.
+Colors encode the magnitude used for ranking (|mean| or variance respectively).
+}
+\examples{
+\donttest{
+if (requireNamespace("plotly", quietly = TRUE)) {
+  # Tiny synthetic "fit" object on 6 genes to keep examples fast:
+  set.seed(2)
+  genes <- paste0("G", 1:6)
+  R     <- diag(6)
+  R[1,2] <- R[2,1] <- 0.4
+  R[1,3] <- R[3,1] <- -0.3
+  sdv   <- runif(6, 0.8, 1.2)
+  Sigma <- diag(sdv) \%*\% R \%*\% diag(sdv)
+  fit   <- list(
+    sigma    = stats::cov2cor(Sigma),  # pretend we estimated corr
+    sd       = sdv,
+    mu       = rep(0, 6),
+    features = genes
+  )
+  plt <- plot_partner_knockout_densities_dual(
+    fit, target = "G1", knocked = "G2", k = 3,
+    use_original_units = TRUE
+  )
+  # In interactive R, print to view:
+  # plt$mean_plot; plt$var_plot
+}
+}
+
+}
+\references{
+C. Sievert (2020). \emph{Interactive Web-Based Data Visualization with R, plotly, and shiny}.
+Chapman & Hall/CRC.
+Anderson, T.W. (2003). \emph{An Introduction to Multivariate Statistical Analysis} (3rd ed.).
+Wiley.
+}
+\seealso{
+\code{\link{recover_covariance}}, \code{\link{predict_conditional_knockout}},
+\code{\link{run_glasso_seurat}}, \code{\link{fit_glasso}}
 }

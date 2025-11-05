@@ -23,4 +23,21 @@ reconstruct the covariance matrix in the original units via
 \eqn{\Sigma = D \, R \, D}, where \eqn{D = \mathrm{diag}(\text{sd})}
 and \eqn{R = \mathrm{cov2cor}(\text{sigma})}.
 }
+\examples{
+# Suppose a fit list stores correlation (sigma) and per-gene sds:
+set.seed(1)
+genes <- paste0("G", 1:5)
+R <- diag(5); R[1,2] <- R[2,1] <- 0.5
+sdv <- runif(5, 0.7, 1.3)
+fit_demo <- list(sigma = R, sd = sdv, features = genes)
+S_cov <- recover_covariance(fit_demo, renormalize = TRUE)
+dimnames(S_cov)
+
+}
+\references{
+Anderson, T.W. (2003) \emph{An Introduction to Multivariate Statistical Analysis} (3rd ed.). Wiley.
+}
+\seealso{
+\code{\link{predict_knockout_from_fit}}, \code{\link{run_glasso_seurat}}
+}
 \keyword{internal}

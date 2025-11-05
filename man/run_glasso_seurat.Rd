@@ -18,10 +18,10 @@ run_glasso_seurat(obj, nfeatures = 2000, rho = 0.1)
 \value{
 A list with components:
 \itemize{
-\item \code{omega}: estimated precision matrix (inverse covariance) for the selected features.
-\item \code{sigma}: estimated covariance matrix for the selected features.
-\item \code{mu}: numeric vector of per-gene means (order matches \code{features}).
-\item \code{sd}: numeric vector of per-gene standard deviations (order matches \code{features}).
+\item \code{omega}: estimated precision matrix (inverse covariance).
+\item \code{sigma}: estimated covariance matrix.
+\item \code{mu}: numeric vector of per-gene means.
+\item \code{sd}: numeric vector of per-gene standard deviations.
 \item \code{features}: character vector of feature (gene) names used.
 \item \code{glasso}: the raw \code{glasso} fit object.
 }
@@ -37,4 +37,26 @@ Variable features are selected with \code{Seurat::FindVariableFeatures()}.
 Per-gene mean (\code{mu}) and standard deviation (\code{sd}) are computed from the
 normalized (unscaled) expression for the selected features. The covariance
 matrix used by glasso is computed from the z-scored matrix of those features.
+}
+\examples{
+\donttest{
+if (requireNamespace("Seurat", quietly = TRUE) &&
+    requireNamespace("glasso", quietly = TRUE)) {
+  set.seed(2)
+  m <- matrix(rpois(4000, 5), nrow = 200, ncol = 20,
+              dimnames = list(paste0("G",1:200), paste0("C",1:20)))
+  obj <- Seurat::CreateSeuratObject(m)
+  obj <- Seurat::NormalizeData(obj)
+  fit <- run_glasso_seurat(obj, nfeatures = 100, rho = 0.2)
+  str(fit)
+}
+}
+
+}
+\references{
+Friedman, J., Hastie, T., & Tibshirani, R. (2008).
+Sparse inverse covariance estimation with the graphical lasso.
+\emph{Biostatistics}, 9(3), 432–441.
+Hao, Y. et al. (2021). Integrated analysis of multimodal single-cell data.
+\emph{Cell} 184(13):3573–3587.
 }

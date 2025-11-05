@@ -1,0 +1,14 @@
+citHeader("Please cite getNC as:")
+
+citEntry(
+  entry    = "Manual",
+  title    = "getNC: Gaussian Assumption experiment testing and knockout calculator",
+  author   = as.person(c(
+    "Zhanyan Guo"
+  )),
+  year     = "2025",
+  note     = "R package version 0.1.0",
+  url      = "https://github.com/ZhanyanGuo/getNC",
+  textVersion =
+    "Guo Z (2025). getNC: Gaussian Assumption experiment testing and knockout calculator. R package version 0.1.0. https://github.com/ZhanyanGuo/getNC"
+)

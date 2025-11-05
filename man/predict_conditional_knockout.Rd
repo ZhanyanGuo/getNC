@@ -21,6 +21,31 @@ predict_conditional_knockout(Sigma, genes, target, knocked, mu = NULL)
 list with \code{mean_cond} and \code{cov_cond}.
 }
 \description{
-Compute Expectation target | knocked=0 and Var target | knocked=0 given
-a covariance matrix and gene names.
+Compute \emph{E\link{target | knocked = 0}} and \emph{Var\link{target | knocked = 0}} given
+a covariance matrix and gene names under a multivariate Normal model.
+}
+\examples{
+# Small synthetic example (4 genes). Predict G1 given {G3, G4} knocked to 0.
+set.seed(123)
+genes <- c("G1","G2","G3","G4")
+R <- matrix(c(1, 0.4, 0.2, 0,
+              0.4, 1, 0.1, 0.3,
+              0.2, 0.1, 1, -0.25,
+              0,   0.3, -0.25, 1), 4, 4, dimnames=list(genes, genes))
+sdv   <- c(1.0, 0.8, 1.2, 0.9)
+Sigma <- diag(sdv) \%*\% R \%*\% diag(sdv)
+mu    <- rep(0, length(genes))
+ans   <- predict_conditional_knockout(
+  Sigma, genes, target = "G1", knocked = c("G3","G4"), mu = mu
+)
+ans$mean_cond   # conditional mean for G1
+ans$cov_cond    # conditional variance matrix for G1 (1x1 here)
+
+}
+\references{
+Anderson, T.W. (2003) \emph{An Introduction to Multivariate Statistical Analysis} (3rd ed.). Wiley.
+Mardia, K.V., Kent, J.T., & Bibby, J.M. (1979) \emph{Multivariate Analysis}. Academic Press.
+}
+\seealso{
+\code{\link{recover_covariance}}, \code{\link{predict_knockout_from_fit}}
 }

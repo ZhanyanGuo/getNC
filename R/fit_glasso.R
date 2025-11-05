@@ -1,42 +1,62 @@
 #' Quality control and normalization
-#' for a given seurat single cell expression matrix
+#' for a given Seurat single-cell expression matrix
 #' (Seurat Object)
 #'
 #' @param obj Seurat object or matrix. If Seurat, QC is applied.
 #' @param min_genes minimum genes per cell (default 200)
 #' @param max_genes maximum genes per cell (default 2500)
 #' @param max_mt    maximum percent mitochondrial genes (default 5)
-#' @param normalize boolean for optional normalization (default True)
-#' @param sf scale.factor for normalization (defult 10000)
-#' @return subset of the seurat object
+#' @param normalize boolean for optional normalization (default TRUE)
+#' @param sf scale.factor for normalization (default 10000)
+#' @return subset of the Seurat object (post-QC; optionally normalized)
+#'
+#' @examples
+#' \donttest{
+#' if (requireNamespace("Seurat", quietly = TRUE)) {
+#'   set.seed(1)
+#'   m <- matrix(rpois(2000, 5), nrow = 200, ncol = 10,
+#'               dimnames = list(paste0("G",1:200), paste0("C",1:10)))
+#'   obj <- Seurat::CreateSeuratObject(m)
+#'   obj_qc <- preprocess_seurat_data(obj,
+#'                                    min_genes = 0,
+#'                                    max_genes = 5000,
+#'                                    max_mt    = 100,
+#'                                    normalize = TRUE,
+#'                                    sf        = 10000)
+#'   obj_qc
+#' }
+#' }
+#'
+#' @references
+#' Hao, Y. et al. (2021). Integrated analysis of multimodal single-cell data.
+#'   \emph{Cell} 184(13):3573–3587.
+#'
 #' @import Seurat
 #' @export
-
 preprocess_seurat_data <- function(obj,
                                    min_genes = 200,
                                    max_genes = 2500,
                                    max_mt = 5,
                                    normalize = TRUE,
                                    sf = 10000) {
-    if (!"percent.mt" %in% colnames(obj[[]])) {
-        obj[["percent.mt"]] <-
-            Seurat::PercentageFeatureSet(obj, pattern = "^MT-")
-    }
-    obj <- subset(obj,
-        subset = obj$nFeature_RNA > min_genes &
-            obj$nFeature_RNA < max_genes &
-            obj$percent.mt < max_mt
-    )
-    if (normalize) {
-        obj <- Seurat::NormalizeData(obj,
-            normalization.method = "LogNormalize",
-            scale.factor = sf
-        )
-    }
-    return(obj)
+  if (!"percent.mt" %in% colnames(obj[[]])) {
+    obj[["percent.mt"]] <-
+      Seurat::PercentageFeatureSet(obj, pattern = "^MT-")
+  }
+  obj <- subset(obj,
+                subset = obj$nFeature_RNA > min_genes &
+                  obj$nFeature_RNA < max_genes &
+                  obj$percent.mt < max_mt)
+  if (normalize) {
+    obj <- Seurat::NormalizeData(obj,
+                                 normalization.method = "LogNormalize",
+                                 scale.factor = sf)
+  }
+  return(obj)
 }
 
 # helper for Seurat v4/v5 compatibility
+#' @keywords internal
 .get_data <- function(obj, which = c("data", "scale.data")) {
   which <- match.arg(which)
   if ("layer" %in% names(formals(Seurat::GetAssayData))) {
@@ -46,8 +66,10 @@ preprocess_seurat_data <- function(obj,
   }
 }
 
-#' Variable-feature selection + record mean/sd + z-score
-#' (returns z, mu, sd, and features)
+#' Variable-feature selection + record mean/sd + z-score (internal)
+#'
+#' Returns a list with z-scored matrix, per-gene mean/sd, and the feature set.
+#'
 #' @param obj Seurat object (already normalized)
 #' @param nfeatures number of variable features to select
 #' @return list(z, mu, sd, features)
@@ -89,6 +111,7 @@ zscore_seurat_with_params <- function(obj, nfeatures = 2000) {
     features = feats
   )
 }
+
 #' Run graphical lasso on a Seurat object
 #'
 #' This wrapper selects variable features, records per-gene mean and standard
@@ -109,13 +132,34 @@ zscore_seurat_with_params <- function(obj, nfeatures = 2000) {
 #'
 #' @return A list with components:
 #' \itemize{
-#'   \item \code{omega}: estimated precision matrix (inverse covariance) for the selected features.
-#'   \item \code{sigma}: estimated covariance matrix for the selected features.
-#'   \item \code{mu}: numeric vector of per-gene means (order matches \code{features}).
-#'   \item \code{sd}: numeric vector of per-gene standard deviations (order matches \code{features}).
+#'   \item \code{omega}: estimated precision matrix (inverse covariance).
+#'   \item \code{sigma}: estimated covariance matrix.
+#'   \item \code{mu}: numeric vector of per-gene means.
+#'   \item \code{sd}: numeric vector of per-gene standard deviations.
 #'   \item \code{features}: character vector of feature (gene) names used.
 #'   \item \code{glasso}: the raw \code{glasso} fit object.
 #' }
+#'
+#' @examples
+#' \donttest{
+#' if (requireNamespace("Seurat", quietly = TRUE) &&
+#'     requireNamespace("glasso", quietly = TRUE)) {
+#'   set.seed(2)
+#'   m <- matrix(rpois(4000, 5), nrow = 200, ncol = 20,
+#'               dimnames = list(paste0("G",1:200), paste0("C",1:20)))
+#'   obj <- Seurat::CreateSeuratObject(m)
+#'   obj <- Seurat::NormalizeData(obj)
+#'   fit <- run_glasso_seurat(obj, nfeatures = 100, rho = 0.2)
+#'   str(fit)
+#' }
+#' }
+#'
+#' @references
+#' Friedman, J., Hastie, T., & Tibshirani, R. (2008).
+#'   Sparse inverse covariance estimation with the graphical lasso.
+#'   \emph{Biostatistics}, 9(3), 432–441.
+#' Hao, Y. et al. (2021). Integrated analysis of multimodal single-cell data.
+#'   \emph{Cell} 184(13):3573–3587.
 #'
 #' @import Seurat
 #' @import glasso
@@ -138,7 +182,6 @@ run_glasso_seurat <- function(obj, nfeatures = 2000, rho = 0.1) {
     glasso   = fit
   )
 }
-
 
 #' Fit graphical lasso on a Seurat object (with QC + default data)
 #'
@@ -165,6 +208,23 @@ run_glasso_seurat <- function(obj, nfeatures = 2000, rho = 0.1) {
 #'   \item \code{features}: character vector of genes used
 #'   \item \code{glasso}: the raw \code{glasso} fit object
 #' }
+#'
+#' @examples
+#' \donttest{
+#' if (requireNamespace("Seurat", quietly = TRUE) &&
+#'     requireNamespace("glasso", quietly = TRUE)) {
+#'   # Use internal example when obj = NULL (expects pbmc_small bundled in package)
+#'   fit <- fit_glasso(obj = NULL, nfeatures = 50, rho = 0.15)
+#'   names(fit)
+#' }
+#' }
+#'
+#' @references
+#' Hao, Y. et al. (2021). Integrated analysis of multimodal single-cell data.
+#'   \emph{Cell} 184(13):3573–3587.
+#' Friedman, J., Hastie, T., & Tibshirani, R. (2008).
+#'   Sparse inverse covariance estimation with the graphical lasso.
+#'   \emph{Biostatistics}, 9(3), 432–441.
 #'
 #' @importFrom utils data
 #' @export
@@ -205,3 +265,5 @@ fit_glasso <- function(obj = NULL,
 
   res
 }
+
+# Gen AI used for documentation and input verify

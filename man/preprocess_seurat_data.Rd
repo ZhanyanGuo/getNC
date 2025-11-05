@@ -3,7 +3,7 @@
 \name{preprocess_seurat_data}
 \alias{preprocess_seurat_data}
 \title{Quality control and normalization
-for a given seurat single cell expression matrix
+for a given Seurat single-cell expression matrix
 (Seurat Object)}
 \usage{
 preprocess_seurat_data(
@@ -24,15 +24,37 @@ preprocess_seurat_data(
 
 \item{max_mt}{maximum percent mitochondrial genes (default 5)}
 
-\item{normalize}{boolean for optional normalization (default True)}
+\item{normalize}{boolean for optional normalization (default TRUE)}
 
-\item{sf}{scale.factor for normalization (defult 10000)}
+\item{sf}{scale.factor for normalization (default 10000)}
 }
 \value{
-subset of the seurat object
+subset of the Seurat object (post-QC; optionally normalized)
 }
 \description{
 Quality control and normalization
-for a given seurat single cell expression matrix
+for a given Seurat single-cell expression matrix
 (Seurat Object)
+}
+\examples{
+\donttest{
+if (requireNamespace("Seurat", quietly = TRUE)) {
+  set.seed(1)
+  m <- matrix(rpois(2000, 5), nrow = 200, ncol = 10,
+              dimnames = list(paste0("G",1:200), paste0("C",1:10)))
+  obj <- Seurat::CreateSeuratObject(m)
+  obj_qc <- preprocess_seurat_data(obj,
+                                   min_genes = 0,
+                                   max_genes = 5000,
+                                   max_mt    = 100,
+                                   normalize = TRUE,
+                                   sf        = 10000)
+  obj_qc
+}
+}
+
+}
+\references{
+Hao, Y. et al. (2021). Integrated analysis of multimodal single-cell data.
+\emph{Cell} 184(13):3573–3587.
 }

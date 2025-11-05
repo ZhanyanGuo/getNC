@@ -1,8 +1,9 @@
 #' Sweep partner knockouts for a single target
 #'
-#' For each candidate partner gene g (excluding the target and already-knocked genes),
-#' compute Expectation target | (knocked ∪ {g}) = 0. and Var target | (knocked ∪ {g}) = 0.
-#' Inputs mirror `predict_conditional_knockout()`.
+#' For each candidate partner gene \code{g} (excluding the target and already-knocked genes),
+#' compute \eqn{\mathbb{E}[ \text{target} \mid (\text{knocked} \cup \{g\}) = 0 ]} and
+#' \eqn{\mathrm{Var}[ \text{target} \mid (\text{knocked} \cup \{g\}) = 0 ]}.
+#' Inputs mirror \code{\link{predict_conditional_knockout}}.
 #'
 #' @param Sigma Covariance matrix (features x features).
 #' @param genes Character vector of feature names aligned with `Sigma`.
@@ -15,6 +16,26 @@
 #'     \item \code{mean}: conditional means of the target under each partner knockout
 #'     \item \code{var}:  conditional variances of the target under each partner knockout
 #'   }
+#'
+#' @examples
+#' # Minimal synthetic example (3 genes): target = G1; knock out G2 or G3
+#' set.seed(1)
+#' genes  <- c("G1","G2","G3")
+#' R      <- matrix(c(1, 0.3, -0.2,
+#'                    0.3, 1,   0.1,
+#'                   -0.2, 0.1, 1), 3, 3, dimnames = list(genes, genes))
+#' sdv    <- c(1.0, 0.8, 1.2)
+#' Sigma  <- diag(sdv) %*% R %*% diag(sdv)  # covariance in original units
+#' out    <- sweep_partner_knockouts(Sigma, genes, target = "G1", knocked = "G2", mu = c(0,0,0))
+#' str(out)
+#'
+#' @seealso \code{\link{predict_conditional_knockout}}
+#'
+#' @references
+#' Anderson, T.W. (2003). \emph{An Introduction to Multivariate Statistical Analysis} (3rd ed.).
+#'   Wiley. (Conditional Normal formulae)
+#' Mardia, K.V., Kent, J.T., & Bibby, J.M. (1979). \emph{Multivariate Analysis}. Academic Press.
+#'
 #' @export
 sweep_partner_knockouts <- function(Sigma,
                                     genes,
@@ -79,17 +100,58 @@ sweep_partner_knockouts <- function(Sigma,
 
 #' 3D density plots from a glasso fit, ranked by mean and by variance (colored by magnitude)
 #'
-#' @param fit List from run_glasso_seurat()/fit_glasso() (needs $sigma, $features; for
-#'   original units also needs $sd, and optionally $mu).
+#' Produces two interactive 3D line plots (via plotly): top-K partners ranked by
+#' \code{|conditional mean|} and top-K partners ranked by \code{conditional variance}.
+#' Colors encode the magnitude used for ranking (|mean| or variance respectively).
+#'
+#' @param fit List from \code{run_glasso_seurat()}/\code{fit_glasso()} (needs \code{$sigma}, \code{$features};
+#'   for original units also needs \code{$sd}, and optionally \code{$mu}).
 #' @param target Single gene (name or index) to predict.
 #' @param knocked Vector of already-knocked genes (names or indices).
 #' @param k Integer, how many partners to plot for each ranking (default 15).
-#' @param use_original_units TRUE to recover covariance via sd (Σ = D R D). If FALSE, use corr scale.
-#' @param renormalize TRUE to cov2cor(fit$sigma) before scaling when recovering Σ.
+#' @param use_original_units TRUE to recover covariance via sd (\eqn{\Sigma = D R D}). If FALSE, use corr scale.
+#' @param renormalize TRUE to \code{cov2cor(fit$sigma)} before scaling when recovering \eqn{\Sigma}.
 #' @param xlim Optional length-2 numeric x-range for the pdf curves; NULL = auto.
 #' @param n Number of x points per curve (default 200).
 #'
 #' @return list(mean_plot = plotly_object, var_plot = plotly_object)
+#'
+#' @examples
+#' \donttest{
+#' if (requireNamespace("plotly", quietly = TRUE)) {
+#'   # Tiny synthetic "fit" object on 6 genes to keep examples fast:
+#'   set.seed(2)
+#'   genes <- paste0("G", 1:6)
+#'   R     <- diag(6)
+#'   R[1,2] <- R[2,1] <- 0.4
+#'   R[1,3] <- R[3,1] <- -0.3
+#'   sdv   <- runif(6, 0.8, 1.2)
+#'   Sigma <- diag(sdv) %*% R %*% diag(sdv)
+#'   fit   <- list(
+#'     sigma    = stats::cov2cor(Sigma),  # pretend we estimated corr
+#'     sd       = sdv,
+#'     mu       = rep(0, 6),
+#'     features = genes
+#'   )
+#'   plt <- plot_partner_knockout_densities_dual(
+#'     fit, target = "G1", knocked = "G2", k = 3,
+#'     use_original_units = TRUE
+#'   )
+#'   # In interactive R, print to view:
+#'   # plt$mean_plot; plt$var_plot
+#' }
+#' }
+#'
+#' @seealso \code{\link{recover_covariance}}, \code{\link{predict_conditional_knockout}},
+#'   \code{\link{run_glasso_seurat}}, \code{\link{fit_glasso}}
+#'
+#' @references
+#' C. Sievert (2020). \emph{Interactive Web-Based Data Visualization with R, plotly, and shiny}.
+#'   Chapman & Hall/CRC.
+#' Anderson, T.W. (2003). \emph{An Introduction to Multivariate Statistical Analysis} (3rd ed.).
+#'   Wiley.
+#'
+#' @importFrom stats dnorm cov2cor
 #' @export
 plot_partner_knockout_densities_dual <- function(
   fit, target, knocked = character(0),
@@ -122,6 +184,8 @@ plot_partner_knockout_densities_dual <- function(
   m_all <- as.numeric(sv$mean)
   v_all <- as.numeric(sv$var)
   sd_all <- sqrt(pmax(v_all, 0))
+
+  # The following part involves chat-GPT 5 for handleling colors and orgnizing
 
   # color mapper (0..1 -> hex)
   .mk_mapper <- function() {
@@ -214,3 +278,5 @@ plot_partner_knockout_densities_dual <- function(
 
   list(mean_plot = mean_plot, var_plot = var_plot)
 }
+
+# Gen Ai used for documentation and input verify

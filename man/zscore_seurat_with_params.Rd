@@ -2,8 +2,7 @@
 % Please edit documentation in R/fit_glasso.R
 \name{zscore_seurat_with_params}
 \alias{zscore_seurat_with_params}
-\title{Variable-feature selection + record mean/sd + z-score
-(returns z, mu, sd, and features)}
+\title{Variable-feature selection + record mean/sd + z-score (internal)}
 \usage{
 zscore_seurat_with_params(obj, nfeatures = 2000)
 }
@@ -16,7 +15,6 @@ zscore_seurat_with_params(obj, nfeatures = 2000)
 list(z, mu, sd, features)
 }
 \description{
-Variable-feature selection + record mean/sd + z-score
-(returns z, mu, sd, and features)
+Returns a list with z-scored matrix, per-gene mean/sd, and the feature set.
 }
 \keyword{internal}

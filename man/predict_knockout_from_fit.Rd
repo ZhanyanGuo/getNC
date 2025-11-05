@@ -30,7 +30,35 @@ list with \code{mean_cond} and \code{cov_cond}.
 }
 \description{
 Uses a fit list produced by \code{run_glasso_seurat()} / \code{fit_glasso()}
-to compute Expectation target | knocked=0 and Var target | knocked=0.
+to compute \emph{E\link{target | knocked = 0}} and \emph{Var\link{target | knocked = 0}}.
 You can choose to work on original units (recover covariance via sd)
 or on the correlation scale.
+}
+\examples{
+# Build a tiny synthetic "fit" object and compute conditional for a target:
+set.seed(10)
+genes <- paste0("G", 1:6)
+R <- diag(6); R[1,2] <- R[2,1] <- 0.35; R[1,3] <- R[3,1] <- -0.25
+sdv <- runif(6, 0.8, 1.2)
+fit_small <- list(
+  sigma    = R,           # here treated as correlation for the demo
+  sd       = sdv,         # needed to recover covariance in original units
+  mu       = rep(0, 6),   # optional; default 0 if absent
+  features = genes
+)
+# Predict target G1 given G2 knocked to 0:
+out <- predict_knockout_from_fit(
+  fit_small, target = "G1", knocked = "G2",
+  use_original_units = TRUE
+)
+out$mean_cond
+out$cov_cond
+
+}
+\references{
+Mardia, K.V., Kent, J.T., & Bibby, J.M. (1979) \emph{Multivariate Analysis}. Academic Press.
+}
+\seealso{
+\code{\link{predict_conditional_knockout}}, \code{\link{recover_covariance}},
+\code{\link{run_glasso_seurat}}, \code{\link{fit_glasso}}
 }

@@ -1,7 +1,7 @@
 #' Conditional prediction for combinational knockouts
 #'
-#' Compute Expectation target | knocked=0 and Var target | knocked=0 given
-#' a covariance matrix and gene names.
+#' Compute \emph{E[target | knocked = 0]} and \emph{Var[target | knocked = 0]} given
+#' a covariance matrix and gene names under a multivariate Normal model.
 #'
 #' @param Sigma Covariance matrix of the Gaussian model (features x features).
 #' @param genes Character vector of feature (gene) names aligned with Sigma.
@@ -10,13 +10,36 @@
 #' @param mu Optional mean vector (same order as `genes`). If NULL, zeros are used.
 #'
 #' @return list with `mean_cond` and `cov_cond`.
+#'
+#' @examples
+#' # Small synthetic example (4 genes). Predict G1 given {G3, G4} knocked to 0.
+#' set.seed(123)
+#' genes <- c("G1","G2","G3","G4")
+#' R <- matrix(c(1, 0.4, 0.2, 0,
+#'               0.4, 1, 0.1, 0.3,
+#'               0.2, 0.1, 1, -0.25,
+#'               0,   0.3, -0.25, 1), 4, 4, dimnames=list(genes, genes))
+#' sdv   <- c(1.0, 0.8, 1.2, 0.9)
+#' Sigma <- diag(sdv) %*% R %*% diag(sdv)
+#' mu    <- rep(0, length(genes))
+#' ans   <- predict_conditional_knockout(
+#'   Sigma, genes, target = "G1", knocked = c("G3","G4"), mu = mu
+#' )
+#' ans$mean_cond   # conditional mean for G1
+#' ans$cov_cond    # conditional variance matrix for G1 (1x1 here)
+#'
+#' @seealso \code{\link{recover_covariance}}, \code{\link{predict_knockout_from_fit}}
+#'
+#' @references
+#' Anderson, T.W. (2003) *An Introduction to Multivariate Statistical Analysis* (3rd ed.). Wiley.
+#' Mardia, K.V., Kent, J.T., & Bibby, J.M. (1979) *Multivariate Analysis*. Academic Press.
+#'
 #' @export
 predict_conditional_knockout <- function(Sigma,
                                          genes,
                                          target,
                                          knocked,
                                          mu = NULL) {
-
   if (is.null(Sigma) || is.null(genes)) {
     stop("Provide both `Sigma` (covariance) and `genes` (feature names).")
   }
@@ -82,6 +105,23 @@ predict_conditional_knockout <- function(Sigma,
 #'   to an exact correlation matrix with \code{stats::cov2cor()} before scaling.
 #'
 #' @return A covariance matrix in original units (dimnames set to \code{features}).
+#'
+#' @examples
+#' # Suppose a fit list stores correlation (sigma) and per-gene sds:
+#' set.seed(1)
+#' genes <- paste0("G", 1:5)
+#' R <- diag(5); R[1,2] <- R[2,1] <- 0.5
+#' sdv <- runif(5, 0.7, 1.3)
+#' fit_demo <- list(sigma = R, sd = sdv, features = genes)
+#' S_cov <- recover_covariance(fit_demo, renormalize = TRUE)
+#' dimnames(S_cov)
+#'
+#' @seealso \code{\link{predict_knockout_from_fit}}, \code{\link{run_glasso_seurat}}
+#'
+#' @references
+#' Anderson, T.W. (2003) *An Introduction to Multivariate Statistical Analysis* (3rd ed.). Wiley.
+#'
+#' @importFrom stats cov2cor
 #' @keywords internal
 recover_covariance <- function(fit, renormalize = TRUE) {
   req <- c("sigma", "sd", "features")
@@ -102,8 +142,8 @@ recover_covariance <- function(fit, renormalize = TRUE) {
 
 #' Predict conditional mean/covariance from a glasso-style fit
 #'
-#' Uses a fit list produced by `run_glasso_seurat()` / `fit_glasso()`
-#' to compute Expectation target | knocked=0 and Var target | knocked=0.
+#' Uses a fit list produced by \code{run_glasso_seurat()} / \code{fit_glasso()}
+#' to compute \emph{E[target | knocked = 0]} and \emph{Var[target | knocked = 0]}.
 #' You can choose to work on original units (recover covariance via sd)
 #' or on the correlation scale.
 #'
@@ -116,6 +156,33 @@ recover_covariance <- function(fit, renormalize = TRUE) {
 #'   first renormalize `fit$sigma` to exact correlation via `cov2cor()` before scaling.
 #'
 #' @return list with `mean_cond` and `cov_cond`.
+#'
+#' @examples
+#' # Build a tiny synthetic "fit" object and compute conditional for a target:
+#' set.seed(10)
+#' genes <- paste0("G", 1:6)
+#' R <- diag(6); R[1,2] <- R[2,1] <- 0.35; R[1,3] <- R[3,1] <- -0.25
+#' sdv <- runif(6, 0.8, 1.2)
+#' fit_small <- list(
+#'   sigma    = R,           # here treated as correlation for the demo
+#'   sd       = sdv,         # needed to recover covariance in original units
+#'   mu       = rep(0, 6),   # optional; default 0 if absent
+#'   features = genes
+#' )
+#' # Predict target G1 given G2 knocked to 0:
+#' out <- predict_knockout_from_fit(
+#'   fit_small, target = "G1", knocked = "G2",
+#'   use_original_units = TRUE
+#' )
+#' out$mean_cond
+#' out$cov_cond
+#'
+#' @seealso \code{\link{predict_conditional_knockout}}, \code{\link{recover_covariance}},
+#'   \code{\link{run_glasso_seurat}}, \code{\link{fit_glasso}}
+#'
+#' @references
+#' Mardia, K.V., Kent, J.T., & Bibby, J.M. (1979) *Multivariate Analysis*. Academic Press.
+#'
 #' @export
 predict_knockout_from_fit <- function(fit,
                                       target,
@@ -151,3 +218,5 @@ predict_knockout_from_fit <- function(fit,
     mu     = mu
   )
 }
+
+# Gen Ai used for documentation and input verify
