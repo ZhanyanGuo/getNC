@@ -104,7 +104,7 @@ sweep_partner_knockouts <- function(Sigma,
 #' \code{|conditional mean|} and top-K partners ranked by \code{conditional variance}.
 #' Colors encode the magnitude used for ranking (|mean| or variance respectively).
 #'
-#' @param fit List from \code{run_glasso_seurat()}/\code{fit_glasso()} (needs \code{$sigma}, \code{$features};
+#' @param fit List from \code{run_glasso()}/\code{fit_glasso()} (needs \code{$sigma}, \code{$features};
 #'   for original units also needs \code{$sd}, and optionally \code{$mu}).
 #' @param target Single gene (name or index) to predict.
 #' @param knocked Vector of already-knocked genes (names or indices).
@@ -279,5 +279,107 @@ plot_partner_knockout_densities_dual <- function(
 
   list(mean_plot = mean_plot, var_plot = var_plot)
 }
+
+#' Get indices of the top-k correlated genes (including if exist target gene(s))
+#'
+#' @param Sigma Covariance (or correlation) matrix.
+#' @param genes Character vector of gene names (length = ncol(Sigma)).
+#' @param target Gene index(es) or name(s).
+#' @param k Number of top genes to return (including the target).
+#'
+#' @return Integer vector of indices for the top-k genes.
+#' @keywords internal
+get_top_k_gene_indices <- function(Sigma, genes, target, k) {
+
+  # --- safety checks ---
+  stopifnot(is.matrix(Sigma), is.numeric(Sigma))
+  stopifnot(length(genes) == ncol(Sigma))
+  stopifnot(k >= 1, k <= length(genes))
+
+  # Convert target to indices
+
+  if (is.character(target)) {
+    # names → indices
+    if (!all(target %in% genes)) {
+      stop("Some target genes not found in `genes`.")
+    }
+    target_idx <- match(target, genes)
+
+  } else if (is.numeric(target)) {
+    # numeric index
+    if (!all(target >= 1 & target <= length(genes))) {
+      stop("Numeric `target` contains invalid indices.")
+    }
+    target_idx <- as.integer(target)
+
+  } else {
+    stop("`target` must be character or numeric.")
+  }
+
+  target_idx <- unique(target_idx)
+
+  # Compute association strength
+
+  # Submatrix: correlations of all genes to target set
+  v <- Sigma[, target_idx, drop = FALSE]
+
+  # For multi-target, use strongest absolute correlation
+  if (length(target_idx) > 1) {
+    assoc <- apply(v, 1, function(x) max(abs(x)))
+  } else {
+    assoc <- abs(v)
+  }
+
+  ranked <- order(assoc, decreasing = TRUE)
+
+  # Take the first k genes
+  top_k <- ranked[seq_len(k)]
+
+  unique(top_k)
+}
+
+#' Create a GLnode object
+#'
+#' @param index Integer. The gene index for this node.
+#' @param neighbours Integer vector of neighbor gene indices.
+#' @param knocked Logical. Whether the gene is knocked or not.
+#'
+#' @return An object of class "GLnode".
+#' @keywords internal
+new_GLnode <- function(index, neighbours = integer(0), knocked = FALSE) {
+  stopifnot(is.numeric(index), length(index) == 1)
+  stopifnot(is.logical(knocked), length(knocked) == 1)
+
+  node <- list(
+    index      = as.integer(index),
+    neighbours = as.integer(neighbours),
+    knocked    = knocked
+  )
+  class(node) <- "GLnode"
+  node
+}
+
+#' Create a GLgraph object
+#'
+#' @param fit The glasso fit object (output of run_glasso()).
+#' @param k Integer. Number of nodes in the graph.
+#' @param nodes List of GLnode objects.
+#'
+#' @return An object of class "GLgraph".
+#' @keywords internal
+new_GLgraph <- function(fit, k, nodes) {
+  stopifnot(is.list(fit))
+  stopifnot(is.numeric(k), length(k) == 1)
+  stopifnot(is.list(nodes))
+
+  g <- list(
+    fit   = fit,
+    k     = as.integer(k),
+    nodes = nodes
+  )
+  class(g) <- "GLgraph"
+  g
+}
+
 
 # Gen Ai used for documentation and input verify
