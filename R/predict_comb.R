@@ -93,14 +93,14 @@ predict_conditional_knockout <- function(Sigma,
 
 #' Recover covariance in original units from a glasso fit on correlation scale
 #'
-#' Given the output list from \code{run_glasso_seurat()} (which contains
+#' Given the output list from \code{run_glasso()} (which contains
 #' \code{sigma} estimated on the correlation scale and per-gene \code{sd}),
 #' reconstruct the covariance matrix in the original units via
 #' \eqn{\Sigma = D \, R \, D}, where \eqn{D = \mathrm{diag}(\text{sd})}
 #' and \eqn{R = \mathrm{cov2cor}(\text{sigma})}.
 #'
 #' @param fit A list with components \code{sigma}, \code{sd}, and \code{features}
-#'   as returned by \code{run_glasso_seurat()}.
+#'   as returned by \code{run_glasso()}.
 #' @param renormalize Logical; if TRUE (default), first convert \code{fit$sigma}
 #'   to an exact correlation matrix with \code{stats::cov2cor()} before scaling.
 #'
@@ -118,7 +118,7 @@ predict_conditional_knockout <- function(Sigma,
 #' dimnames(S_cov)
 #' }
 #'
-#' @seealso \code{\link{predict_knockout_from_fit}}, \code{\link{run_glasso_seurat}}
+#' @seealso \code{\link{predict_knockout_from_fit}}, \code{\link{run_glasso()}}
 #'
 #' @references
 #' Anderson, T.W. (2003) *An Introduction to Multivariate Statistical Analysis* (3rd ed.). Wiley.
@@ -144,7 +144,7 @@ recover_covariance <- function(fit, renormalize = TRUE) {
 
 #' Predict conditional mean/covariance from a glasso-style fit
 #'
-#' Uses a fit list produced by \code{run_glasso_seurat()} / \code{fit_glasso()}
+#' Uses a fit list produced by \code{run_glasso()} / \code{fit_glasso()}
 #' to compute \emph{Expectation target | knocked = 0]} and \emph{Var target | knocked = 0}.
 #' You can choose to work on original units (recover covariance via sd)
 #' or on the correlation scale.
@@ -182,7 +182,7 @@ recover_covariance <- function(fit, renormalize = TRUE) {
 #'}
 #' 
 #' @seealso \code{\link{predict_conditional_knockout}}, \code{\link{recover_covariance}},
-#'   \code{\link{run_glasso_seurat}}, \code{\link{fit_glasso}}
+#'   \code{\link{run_glasso()}}, \code{\link{fit_glasso}}
 #'
 #' @references
 #' Mardia, K.V., Kent, J.T., & Bibby, J.M. (1979) *Multivariate Analysis*. Academic Press.

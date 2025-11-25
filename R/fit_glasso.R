@@ -112,65 +112,14 @@ zscore_seurat_with_params <- function(obj, nfeatures = 2000) {
   )
 }
 
-#' Run graphical lasso on a Seurat object
-#'
-#' This wrapper selects variable features, records per-gene mean and standard
-#' deviation from the normalized expression, produces a z-scored matrix for
-#' those features, and fits a sparse Gaussian graphical model via
-#' \code{glasso::glasso()}.
-#'
-#' @param obj A Seurat object that has already been normalized
-#'   (e.g., via \code{Seurat::NormalizeData()}).
-#' @param nfeatures Integer. Number of variable features to use (default 2000).
-#' @param rho Numeric. \eqn{\ell_1} regularization parameter for
-#'   \code{glasso::glasso()}.
-#'
-#' @details Variable features are selected with \code{Seurat::FindVariableFeatures()}.
-#' Per-gene mean (\code{mu}) and standard deviation (\code{sd}) are computed from the
-#' normalized (unscaled) expression for the selected features. The covariance
-#' matrix used by glasso is computed from the z-scored matrix of those features.
-#'
-#' @return A list with components:
-#' \itemize{
-#'   \item \code{omega}: estimated precision matrix (inverse covariance).
-#'   \item \code{sigma}: estimated covariance matrix.
-#'   \item \code{mu}: numeric vector of per-gene means.
-#'   \item \code{sd}: numeric vector of per-gene standard deviations.
-#'   \item \code{features}: character vector of feature (gene) names used.
-#'   \item \code{glasso}: the raw \code{glasso} fit object.
-#' }
-#'
-#' @examples
-#' \donttest{
-#' if (requireNamespace("Seurat", quietly = TRUE) &&
-#'     requireNamespace("glasso", quietly = TRUE)) {
-#'   set.seed(2)
-#'   m <- matrix(rpois(4000, 5), nrow = 200, ncol = 20,
-#'               dimnames = list(paste0("G",1:200), paste0("C",1:20)))
-#'   obj <- Seurat::CreateSeuratObject(m)
-#'   obj <- Seurat::NormalizeData(obj)
-#'   fit <- run_glasso_seurat(obj, nfeatures = 100, rho = 0.2)
-#'   str(fit)
-#' }
-#' }
-#'
-#' @references
-#' Friedman, J., Hastie, T., & Tibshirani, R. (2008).
-#'   Sparse inverse covariance estimation with the graphical lasso.
-#'   \emph{Biostatistics}, 9(3), 432–441.
-#' Hao, Y. et al. (2021). Integrated analysis of multimodal single-cell data.
-#'   \emph{Cell} 184(13):3573–3587.
-#'
-#' @import Seurat
-#' @import glasso
-#' @importFrom stats cov
-#' @export
-run_glasso_seurat <- function(obj, nfeatures = 2000, rho = 0.1) {
+#' @keywords internal
+run_glasso_seurat_helper <- function(obj, nfeatures, rho) {
   stopifnot(inherits(obj, "Seurat"))
 
   prep <- zscore_seurat_with_params(obj, nfeatures = nfeatures)
-  zmat <- prep$z
-  S    <- stats::cov(t(zmat))
+
+  zmat <- prep$z                     # genes × cells
+  S    <- stats::cov(t(zmat))        # covariance across genes
   fit  <- glasso::glasso(S, rho = rho)
 
   list(
@@ -179,8 +128,121 @@ run_glasso_seurat <- function(obj, nfeatures = 2000, rho = 0.1) {
     mu       = prep$mu,
     sd       = prep$sd,
     features = prep$features,
-    glasso   = fit
+    glasso   = fit,
+    type     = "seurat"
   )
+}
+
+#' @keywords internal
+run_glasso_matrix_helper <- function(mat, nfeatures, rho) {
+
+  stopifnot(is.matrix(mat), is.numeric(mat))
+
+  # HVG + z-scoring (cells × genes)
+  prep <- zscore_matrix_with_params(mat, nfeatures = nfeatures)
+
+  # covariance across genes
+  S <- stats::cov(prep$z)
+  fit <- glasso::glasso(S, rho = rho)
+
+  list(
+    omega    = fit$wi,
+    sigma    = fit$w,
+    mu       = prep$mu,
+    sd       = prep$sd,
+    features = prep$features,
+    glasso   = fit,
+    type     = "matrix"
+  )
+}
+
+#' Run Graphical Lasso on a Seurat Object or Raw Count Matrix
+#'
+#' This unified wrapper automatically detects whether the input is a
+#' \code{Seurat} object or a raw count matrix with rows representing cells
+#' and columns representing genes. It applies the appropriate preprocessing
+#' pipeline (QC + normalization for raw matrices, variable feature
+#' selection + z-scoring for Seurat) before estimating a sparse precision
+#' matrix using the graphical lasso.
+#'
+#' @param x A Seurat object (already normalized) or a numeric matrix
+#'          with \strong{rows = cells} and \strong{columns = genes}.
+#' @param nfeatures Integer. Number of highly variable genes to select.
+#'        Default: 2000.
+#' @param rho Numeric. L1-regularization parameter passed to
+#'        \code{glasso::glasso()}. Default: 0.1.
+#' @param ... Additional arguments passed to \code{preprocess_matrix_raw()}
+#'            when the input is a raw matrix (e.g., QC thresholds).
+#'
+#' @details
+#' \strong{If the input is a Seurat object}  
+#' The function:
+#' \enumerate{
+#'   \item selects variable features via \code{Seurat::FindVariableFeatures()},
+#'   \item extracts normalized data (layer/slot = "data"),
+#'   \item computes per-gene mean and standard deviation,
+#'   \item z-scores genes,
+#'   \item computes covariance across selected genes,
+#'   \item runs \code{glasso::glasso()}.
+#' }
+#'
+#' \strong{If the input is a raw matrix}  
+#' The function:
+#' \enumerate{
+#'   \item performs QC (min/max genes, mitochondrial%, etc.),
+#'   \item normalizes by library size and applies log1p,
+#'   \item selects variable genes by variance,
+#'   \item z-scores genes,
+#'   \item computes covariance,
+#'   \item runs \code{glasso::glasso()}.
+#' }
+#'
+#' @return A list with components:
+#' \itemize{
+#'   \item \code{omega} — estimated precision matrix (inverse covariance)
+#'   \item \code{sigma} — estimated covariance matrix
+#'   \item \code{mu} — per-gene means (of normalized values)
+#'   \item \code{sd} — per-gene standard deviations
+#'   \item \code{features} — vector of gene names used
+#'   \item \code{glasso} — raw \code{glasso} fit object
+#'   \item \code{type} — either \code{"seurat"} or \code{"matrix"}
+#' }
+#'
+#' @examples
+#' \donttest{
+#' if (requireNamespace("Seurat", quietly = TRUE) &&
+#'     requireNamespace("glasso", quietly = TRUE)) {
+#'   set.seed(1)
+#'   m <- matrix(rpois(3000, 5), nrow = 100, ncol = 30,
+#'               dimnames = list(paste0("G",1:100), paste0("C",1:30)))
+#'   obj <- Seurat::CreateSeuratObject(m)
+#'   obj <- Seurat::NormalizeData(obj)
+#'
+#'   fit1 <- run_glasso(obj, nfeatures = 200, rho = 0.2)
+#'   fit2 <- run_glasso(m,   nfeatures = 200, rho = 0.2)
+#' }
+#' }
+#'
+#' @references
+#' Friedman, J., Hastie, T., & Tibshirani, R. (2008).
+#'   Sparse inverse covariance estimation with the graphical lasso.
+#'   \emph{Biostatistics} 9(3), 432–441.
+#'
+#' Hao, Y. et al. (2021). Integrated analysis of multimodal single-cell data.
+#'   \emph{Cell} 184(13):3573–3587.
+#' 
+#' @import Seurat
+#' @import glasso
+#' @importFrom stats cov
+#' @export
+run_glasso <- function(x, nfeatures = 2000, rho = 0.1, ...) {
+  if (inherits(x, "Seurat")) {
+    return(run_glasso_seurat_helper(x, nfeatures = nfeatures, rho = rho))
+  }
+  if (is.matrix(x)) {
+    return(run_glasso_matrix_helper(x, nfeatures = nfeatures, rho = rho, ...))
+  }
+  stop("Input must be a Seurat object or a numeric cells×genes matrix.")
 }
 
 #' Fit graphical lasso on a Seurat object (with QC + default data)
@@ -199,7 +261,7 @@ run_glasso_seurat <- function(obj, nfeatures = 2000, rho = 0.1) {
 #' @param nfeatures Number of variable features to use for glasso.
 #' @param rho Regularization parameter for glasso.
 #'
-#' @return A list (from \code{run_glasso_seurat()}) with:
+#' @return A list (from \code{run_glasso()}) with:
 #' \itemize{
 #'   \item \code{omega}: precision matrix (inverse covariance)
 #'   \item \code{sigma}: covariance matrix
@@ -257,13 +319,249 @@ fit_glasso <- function(obj = NULL,
   )
 
   # Glasso (returns omega, sigma, mu, sd, features, glasso)
-  res <- run_glasso_seurat(
+  res <- run_glasso(
     obj,
     nfeatures = nfeatures,
     rho       = rho
   )
 
   res
+}
+
+#' Fit graphical lasso on a raw count matrix (cells × genes)
+#'
+#' This high-level wrapper (1) preprocesses a raw single-cell count matrix
+#' (QC + optional normalization) and (2) runs graphical lasso on variable,
+#' z-scored features. The interface mirrors \code{fit_glasso()} so that both
+#' Seurat and raw-matrix workflows use identical parameters.
+#'
+#' @param mat Numeric matrix with \strong{rows = cells} and \strong{columns = genes}.
+#' @param min_genes Minimum genes per cell for QC (default 200).
+#' @param max_genes Maximum genes per cell for QC (default 2500).
+#' @param max_mt Maximum mitochondrial percent for QC (default 5).
+#' @param normalize Logical; whether to perform library-size normalization
+#'        and log1p transform. Default TRUE.
+#' @param sf Scale factor for normalization (default 10000).
+#' @param nfeatures Number of variable features (genes) to use for glasso.
+#' @param rho Regularization parameter for glasso.
+#'
+#' @return A list with:
+#' \itemize{
+#'   \item \code{omega}: precision matrix (inverse covariance)
+#'   \item \code{sigma}: covariance matrix
+#'   \item \code{mu}: per-gene means
+#'   \item \code{sd}: per-gene standard deviations
+#'   \item \code{features}: selected genes
+#'   \item \code{glasso}: raw \code{glasso} fit object
+#'   \item \code{type}: "matrix"
+#' }
+#'
+#' @examples
+#' \donttest{
+#' if (requireNamespace("glasso", quietly = TRUE)) {
+#'   m <- matrix(rpois(3000, 4), nrow = 100, ncol = 30,
+#'               dimnames = list(paste0("C",1:100), paste0("G",1:30)))
+#'   fit <- fit_glasso_raw(m,
+#'  min_genes = 0,
+#'  max_genes = 1e6,
+#'  max_mt    = 100,  
+#'  nfeatures = 5,
+#' rho       = 0.05)
+#' }
+#' }
+#'
+#' @export
+fit_glasso_raw <- function(mat,
+                           min_genes = 200,
+                           max_genes = 2500,
+                           max_mt    = 5,
+                           normalize = TRUE,
+                           sf        = 10000,
+                           nfeatures = 20,
+                           rho       = 0.1) {
+
+  if (!is.matrix(mat) || !is.numeric(mat)) {
+    stop("fit_glasso_raw() expects a numeric matrix with rows=cells and cols=genes.")
+  }
+
+  # Step 1 — QC + normalization
+  mat_qc <- preprocess_matrix_raw(
+    mat,
+    min_genes = min_genes,
+    max_genes = max_genes,
+    max_mt    = max_mt,
+    normalize = normalize,
+    sf        = sf
+  )
+
+  # Step 2 — Call the unified dispatcher (matrix case)
+  res <- run_glasso(
+    mat_qc,
+    nfeatures = nfeatures,
+    rho       = rho
+  )
+
+  res
+}
+
+#' Automatically dispatch to Seurat or raw-matrix graphical lasso
+#'
+#' This function detects whether the input is NULL, a Seurat object, or
+#' a raw count matrix (rows = cells, columns = genes), and calls the
+#' appropriate wrapper:
+#' \itemize{
+#'   \item \code{fit_glasso()} for NULL or Seurat input
+#'   \item \code{fit_glasso_raw()} for raw matrices
+#' }
+#'
+#' @param x A Seurat object, a numeric matrix, or NULL.
+#' @param min_genes Minimum genes per cell for QC.
+#' @param max_genes Maximum genes per cell for QC.
+#' @param max_mt Maximum mitochondrial percent for QC.
+#' @param normalize Whether to normalize data.
+#' @param sf Scale factor for normalization.
+#' @param nfeatures Number of variable genes for glasso.
+#' @param rho Regularization parameter for glasso.
+#'
+#' @return Output of either \code{fit_glasso()} or \code{fit_glasso_raw()}.
+#'
+#' @export
+auto_fit_glasso <- function(x = NULL,
+                            min_genes = 200,
+                            max_genes = 2500,
+                            max_mt    = 5,
+                            normalize = TRUE,
+                            sf        = 10000,
+                            nfeatures = 20,
+                            rho       = 0.1) {
+  # Case 1: NULL or Seurat → use fit_glasso()
+  if (is.null(x) || inherits(x, "Seurat")) {
+    return(
+      fit_glasso(
+        obj        = x,
+        min_genes  = min_genes,
+        max_genes  = max_genes,
+        max_mt     = max_mt,
+        normalize  = normalize,
+        sf         = sf,
+        nfeatures  = nfeatures,
+        rho        = rho
+      )
+    )
+  }
+
+  # Case 2: raw matrix → use fit_glasso_raw()
+  if (is.matrix(x) && is.numeric(x)) {
+    return(
+      fit_glasso_raw(
+        mat        = x,
+        min_genes  = min_genes,
+        max_genes  = max_genes,
+        max_mt     = max_mt,
+        normalize  = normalize,
+        sf         = sf,
+        nfeatures  = nfeatures,
+        rho        = rho
+      )
+    )
+  }
+  stop("auto_fit_glasso(): input must be NULL, a Seurat object, or a numeric matrix.")
+}
+
+
+
+
+#' Quality control + normalization for a raw count matrix (cells × genes)
+#'
+#' @param mat numeric matrix, cells × genes (raw counts)
+#' @param min_genes minimum detected genes per cell
+#' @param max_genes maximum detected genes per cell
+#' @param max_mt maximum mitochondrial percent (default 5)
+#' @param normalize whether to normalize (default TRUE)
+#' @param sf scale factor for normalization (default 10000)
+#'
+#' @return a normalized log1p matrix (cells × genes)
+#' @export
+preprocess_matrix_raw <- function(mat,
+                                  min_genes = 200,
+                                  max_genes = 2500,
+                                  max_mt    = 5,
+                                  normalize = TRUE,
+                                  sf        = 10000) {
+
+  stopifnot(is.matrix(mat), is.numeric(mat))
+
+  # detect mitochondrial genes
+  mt_genes <- grepl("^MT-", colnames(mat), ignore.case = TRUE)
+  if (all(!mt_genes)) {
+    warning("No mitochondrial genes detected using '^MT-' pattern.")
+  }
+
+  # cell-level QC
+  ngenes <- rowSums(mat > 0)
+  libsize <- rowSums(mat)
+
+  percent_mt <- if (any(mt_genes)) {
+    rowSums(mat[, mt_genes, drop = FALSE]) / libsize * 100
+  } else {
+    rep(0, nrow(mat))
+  }
+
+  keep_cells <- ngenes > min_genes &
+                ngenes < max_genes &
+                percent_mt < max_mt
+
+  mat <- mat[keep_cells, , drop = FALSE]
+
+  if (!normalize) return(mat)
+
+  # library size normalization
+  lib <- rowSums(mat)
+  mat_norm <- sweep(mat, 1L, lib, "/") * sf
+
+  # log1p to log the variance for numeric stability
+  mat_log <- log1p(mat_norm)
+
+  mat_log
+}
+
+#' Variable gene selection & Z-scoring for raw matrix
+#'
+#' @param mat normalized log1p matrix, cells × genes
+#' @param nfeatures number of highly variable genes to select
+#'
+#' @return list(z, mu, sd, features)
+#' @export
+zscore_matrix_with_params <- function(mat, nfeatures = 2000) {
+
+  stopifnot(is.matrix(mat), is.numeric(mat))
+
+  #compute per-gene variance
+  gene_var <- apply(mat, 2L, stats::var)
+
+  # rank genes by variance
+  nfeatures <- min(nfeatures, ncol(mat))
+  feats <- names(sort(gene_var, decreasing = TRUE))[1:nfeatures]
+
+  submat <- mat[, feats, drop = FALSE]
+
+  #compute mean and sd
+  mu <- colMeans(submat)
+  sd <- apply(submat, 2L, stats::sd)
+
+  # avoid division by zero
+  sd[sd == 0 | is.na(sd)] <- 1
+
+  # z-score -
+  z <- sweep(submat, 2L, mu, "-")
+  z <- sweep(z,      2L, sd, "/")
+
+  list(
+    z        = z,
+    mu       = mu,
+    sd       = sd,
+    features = feats
+  )
 }
 
 # Gen AI used for documentation and input verify

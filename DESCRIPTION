@@ -14,6 +14,7 @@ LazyData: true
 Suggests: 
     knitr,
     rmarkdown,
+    Matrix,
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
 VignetteBuilder: knitr

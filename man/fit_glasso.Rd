@@ -33,7 +33,7 @@ fit_glasso(
 \item{rho}{Regularization parameter for glasso.}
 }
 \value{
-A list (from \code{run_glasso_seurat()}) with:
+A list (from \code{run_glasso()}) with:
 \itemize{
 \item \code{omega}: precision matrix (inverse covariance)
 \item \code{sigma}: covariance matrix
