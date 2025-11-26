@@ -345,7 +345,7 @@ get_top_k_gene_indices <- function(Sigma, genes, target, k) {
 #' @param knocked Logical. Whether the gene is knocked or not.
 #'
 #' @return An object of class "GLnode".
-#' @keywords internal
+#' @export 
 new_GLnode <- function(index, neighbours = integer(0), knocked = FALSE) {
   stopifnot(is.numeric(index), length(index) == 1)
   stopifnot(is.logical(knocked), length(knocked) == 1)
@@ -361,24 +361,159 @@ new_GLnode <- function(index, neighbours = integer(0), knocked = FALSE) {
 
 #' Create a GLgraph object
 #'
-#' @param fit The glasso fit object (output of run_glasso()).
-#' @param k Integer. Number of nodes in the graph.
-#' @param nodes List of GLnode objects.
+#' @param fit A list from run_glasso()/fit_glasso()/fit_glasso_raw().
+#'   Must contain: $sigma, $omega, $features.
+#' @param k Integer. Number of genes to include.
+#' @param target Gene name(s) or index(es).
+#' @param knocked_indices Optional vector of knocked gene indices.
 #'
 #' @return An object of class "GLgraph".
-#' @keywords internal
-new_GLgraph <- function(fit, k, nodes) {
+#' @export
+new_GLgraph <- function(fit, k, target) {
+
+  # basic input checks
   stopifnot(is.list(fit))
+  stopifnot(all(c("sigma", "omega", "features") %in% names(fit)))
   stopifnot(is.numeric(k), length(k) == 1)
-  stopifnot(is.list(nodes))
+
+  # extract needed components
+  genes <- fit$features
+  Sigma <- fit$sigma
+  Omega <- fit$omega
+
+  # get the top-k gene indices based on correlation to target
+  top_k_idx <- get_top_k_gene_indices(
+    Sigma  = Sigma,
+    genes  = genes,
+    target = target,
+    k      = k
+  )
+
+  # extract the k-by-k precision matrix
+  Omega_sub <- Omega[top_k_idx, top_k_idx, drop = FALSE]
+
+  # prepare a list to store node objects
+  nodes <- vector("list", length(top_k_idx))
+
+  # build each node
+  for (i in seq_along(top_k_idx)) {
+    # global gene index
+    global_idx <- top_k_idx[i]
+
+    # row of precision matrix for this node
+    row_i <- Omega_sub[i, ]
+
+    # indices of neighbors in the submatrix
+    neigh_local <- which(row_i != 0)
+
+    # remove self index
+    neigh_local <- setdiff(neigh_local, i)
+
+    # convert local indices to global indices
+    neigh_global <- top_k_idx[neigh_local]
+
+    # create node
+    nodes[[i]] <- new_GLnode(
+      index      = global_idx,
+      neighbours = neigh_global
+    )
+  }
 
   g <- list(
-    fit   = fit,
-    k     = as.integer(k),
-    nodes = nodes
+    fit          = fit,
+    k            = length(nodes),
+    nodes        = nodes,
+    selected_idx = top_k_idx
   )
+
   class(g) <- "GLgraph"
   g
+}
+
+#' Convert GLgraph object to a visNetwork graph
+#'
+#' @param G A GLgraph object.
+#' @param color_normal Color for unknocked nodes.
+#' @param color_knocked Color for knocked nodes.
+#'
+#' @return A visNetwork object.
+#' @export
+visnetwork_from_GLgraph <- function(G,
+                                    color_normal = "lightblue",
+                                    color_knocked = "salmon") {
+
+  # Ensure the input is a GLgraph
+  stopifnot(inherits(G, "GLgraph"))
+
+  # Build node table: id, label, knocked status
+  nodes_df <- data.frame(
+    id = vapply(G$nodes, `[[`, integer(1), "index"),
+    label = paste0("G", vapply(G$nodes, `[[`, integer(1), "index")),
+    knocked = vapply(G$nodes, `[[`, logical(1), "knocked"),
+    stringsAsFactors = FALSE
+  )
+
+  # Assign colors based on knocked status
+  nodes_df$color <- ifelse(nodes_df$knocked, color_knocked, color_normal)
+
+  # Build an edges data frame based on node neighbour lists
+  edges_list <- lapply(G$nodes, function(n) {
+    if (length(n$neighbours) == 0) return(NULL)
+    data.frame(
+      from = n$index,
+      to   = n$neighbours,
+      stringsAsFactors = FALSE
+    )
+  })
+
+  # Combine edge data frames
+  edges_df <- do.call(rbind, edges_list)
+
+  # If no edges exist, create an empty edge table
+  if (is.null(edges_df)) {
+    edges_df <- data.frame(from = integer(0), to = integer(0))
+  }
+
+  # Construct and return the visNetwork graph
+  visNetwork::visNetwork(nodes_df, edges_df) %>%
+    visNetwork::visOptions(
+      highlightNearest = TRUE,
+      nodesIdSelection = TRUE
+    ) %>%
+    visNetwork::visInteraction(selectConnectedEdges = TRUE)
+}
+
+#' Toggle knock state of a node and update visNetwork graph
+#'
+#' @param G A GLgraph object.
+#' @param clicked Integer ID of clicked node.
+#' @param color_normal Color for unknocked nodes.
+#' @param color_knocked Color for knocked nodes.
+#'
+#' @return Updated visNetwork object.
+#' @export
+visnetwork_toggle_knock <- function(G, clicked,
+                                    color_normal = "lightblue",
+                                    color_knocked = "salmon") {
+
+  # Basic input checks: GLgraph and numeric node ID
+  stopifnot(inherits(G, "GLgraph"))
+  stopifnot(is.numeric(clicked), length(clicked) == 1)
+
+  # Identify which node matches the clicked ID
+  idx <- which(vapply(G$nodes, `[[`, integer(1), "index") == clicked)
+
+  # If not found, warn and return unchanged graph
+  if (length(idx) == 0) {
+    warning("Clicked node not found in GLgraph.")
+    return(visnetwork_from_GLgraph(G, color_normal, color_knocked))
+  }
+
+  # Flip the knocked status (TRUE <-> FALSE)
+  G$nodes[[idx]]$knocked <- !G$nodes[[idx]]$knocked
+
+  # Recreate and return the updated network visualization
+  visnetwork_from_GLgraph(G, color_normal, color_knocked)
 }
 
 
