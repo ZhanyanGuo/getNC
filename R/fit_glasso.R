@@ -171,8 +171,6 @@ run_glasso_matrix_helper <- function(mat, nfeatures, rho) {
 #'        Default: 2000.
 #' @param rho Numeric. L1-regularization parameter passed to
 #'        \code{glasso::glasso()}. Default: 0.1.
-#' @param ... Additional arguments passed to \code{preprocess_matrix_raw()}
-#'            when the input is a raw matrix (e.g., QC thresholds).
 #'
 #' @details
 #' \strong{If the input is a Seurat object}  
@@ -235,14 +233,8 @@ run_glasso_matrix_helper <- function(mat, nfeatures, rho) {
 #' @import glasso
 #' @importFrom stats cov
 #' @export
-run_glasso <- function(x, nfeatures = 2000, rho = 0.1, ...) {
-  if (inherits(x, "Seurat")) {
-    return(run_glasso_seurat_helper(x, nfeatures = nfeatures, rho = rho))
-  }
-  if (is.matrix(x)) {
-    return(run_glasso_matrix_helper(x, nfeatures = nfeatures, rho = rho, ...))
-  }
-  stop("Input must be a Seurat object or a numeric cells×genes matrix.")
+run_glasso <- function(x = NULL, nfeatures = 2000, rho = 0.1) {
+  auto_fit_glasso(x, nfeatures = 2000, rho = 0.1)
 }
 
 #' Fit graphical lasso on a Seurat object (with QC + default data)

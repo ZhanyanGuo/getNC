@@ -4,7 +4,7 @@
 \alias{run_glasso}
 \title{Run Graphical Lasso on a Seurat Object or Raw Count Matrix}
 \usage{
-run_glasso(x, nfeatures = 2000, rho = 0.1, ...)
+run_glasso(x = NULL, nfeatures = 2000, rho = 0.1)
 }
 \arguments{
 \item{x}{A Seurat object (already normalized) or a numeric matrix
@@ -15,9 +15,6 @@ Default: 2000.}
 
 \item{rho}{Numeric. L1-regularization parameter passed to
 \code{glasso::glasso()}. Default: 0.1.}
-
-\item{...}{Additional arguments passed to \code{preprocess_matrix_raw()}
-when the input is a raw matrix (e.g., QC thresholds).}
 }
 \value{
 A list with components:

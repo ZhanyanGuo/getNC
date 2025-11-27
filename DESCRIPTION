@@ -23,6 +23,8 @@ Imports:
     grDevices,
     plotly,
     Seurat,
+    shiny,
     stats,
     utils,
-    viridisLite
+    viridisLite,
+    visNetwork,

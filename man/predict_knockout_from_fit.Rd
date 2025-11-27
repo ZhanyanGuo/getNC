@@ -29,7 +29,7 @@ first renormalize \code{fit$sigma} to exact correlation via \code{cov2cor()} bef
 list with \code{mean_cond} and \code{cov_cond}.
 }
 \description{
-Uses a fit list produced by \code{run_glasso_seurat()} / \code{fit_glasso()}
+Uses a fit list produced by \code{run_glasso()} / \code{fit_glasso()}
 to compute \emph{Expectation target | knocked = 0]} and \emph{Var target | knocked = 0}.
 You can choose to work on original units (recover covariance via sd)
 or on the correlation scale.
@@ -62,5 +62,5 @@ Mardia, K.V., Kent, J.T., & Bibby, J.M. (1979) \emph{Multivariate Analysis}. Aca
 }
 \seealso{
 \code{\link{predict_conditional_knockout}}, \code{\link{recover_covariance}},
-\code{\link{run_glasso_seurat}}, \code{\link{fit_glasso}}
+\code{\link{run_glasso()}}, \code{\link{fit_glasso}}
 }

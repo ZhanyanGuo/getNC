@@ -16,7 +16,7 @@ plot_partner_knockout_densities_dual(
 )
 }
 \arguments{
-\item{fit}{List from \code{run_glasso_seurat()}/\code{fit_glasso()} (needs \code{$sigma}, \code{$features};
+\item{fit}{List from \code{run_glasso()}/\code{fit_glasso()} (needs \code{$sigma}, \code{$features};
 for original units also needs \code{$sd}, and optionally \code{$mu}).}
 
 \item{target}{Single gene (name or index) to predict.}

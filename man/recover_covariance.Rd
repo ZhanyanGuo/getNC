@@ -8,7 +8,7 @@ recover_covariance(fit, renormalize = TRUE)
 }
 \arguments{
 \item{fit}{A list with components \code{sigma}, \code{sd}, and \code{features}
-as returned by \code{run_glasso_seurat()}.}
+as returned by \code{run_glasso()}.}
 
 \item{renormalize}{Logical; if TRUE (default), first convert \code{fit$sigma}
 to an exact correlation matrix with \code{stats::cov2cor()} before scaling.}
@@ -17,7 +17,7 @@ to an exact correlation matrix with \code{stats::cov2cor()} before scaling.}
 A covariance matrix in original units (dimnames set to \code{features}).
 }
 \description{
-Given the output list from \code{run_glasso_seurat()} (which contains
+Given the output list from \code{run_glasso()} (which contains
 \code{sigma} estimated on the correlation scale and per-gene \code{sd}),
 reconstruct the covariance matrix in the original units via
 \eqn{\Sigma = D \, R \, D}, where \eqn{D = \mathrm{diag}(\text{sd})}
@@ -40,6 +40,6 @@ dimnames(S_cov)
 Anderson, T.W. (2003) \emph{An Introduction to Multivariate Statistical Analysis} (3rd ed.). Wiley.
 }
 \seealso{
-\code{\link{predict_knockout_from_fit}}, \code{\link{run_glasso_seurat}}
+\code{\link{predict_knockout_from_fit}}, \code{\link{run_glasso()}}
 }
 \keyword{internal}
