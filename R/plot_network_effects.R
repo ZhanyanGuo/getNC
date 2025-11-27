@@ -335,7 +335,7 @@ get_top_k_gene_indices <- function(Sigma, genes, target, k) {
   # Take the first k genes
   top_k <- ranked[seq_len(k)]
 
-  unique(top_k)
+  return(unique(top_k))
 }
 
 #' Create a GLnode object
@@ -396,15 +396,18 @@ new_GLgraph <- function(fit, k, target) {
   nodes <- vector("list", length(top_k_idx))
 
   # build each node
-  for (i in seq(from = 1, to = length(top_k_idx) - 1)) {
+  for (i in seq(from = 1, to = length(top_k_idx))) {
     # global gene index
     global_idx <- top_k_idx[i]
 
     # row of precision matrix for this node
-    row_i <- Omega_sub[i, (i + 1): length(top_k_idx)]
+    row_i <- Omega_sub[i, ]
 
     # indices of neighbors in the submatrix
-    neigh_local <- which(row_i != 0) + i
+    neigh_local <- which(row_i != 0)
+
+    # remove self
+    neigh_local <- setdiff(neigh_local, i)
 
     # convert local indices to global indices
     neigh_global <- top_k_idx[neigh_local]
@@ -443,9 +446,10 @@ visnetwork_from_GLgraph <- function(G,
   stopifnot(inherits(G, "GLgraph"))
 
   # Build node table: id, label, knocked status
+  idx_vec <- vapply(G$nodes, `[[`, integer(1), "index")
   nodes_df <- data.frame(
-    id = vapply(G$nodes, `[[`, integer(1), "index"),
-    label = paste0("G", vapply(G$nodes, `[[`, integer(1), "index")),
+    id = idx_vec,
+    label = G$fit$features[idx_vec],
     knocked = vapply(G$nodes, `[[`, logical(1), "knocked"),
     stringsAsFactors = FALSE
   )
@@ -467,7 +471,7 @@ visnetwork_from_GLgraph <- function(G,
 
   p <- length(top_k_idx)
 
-  for (i in seq_len(p)) {
+  for (i in seq_len(p - 1)) {
     for (j in seq((i + 1), p)) {
       if (Omega_sub[i, j] != 0) {
         edges_df <- rbind(edges_df, data.frame(
