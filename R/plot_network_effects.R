@@ -396,12 +396,12 @@ new_GLgraph <- function(fit, k, target) {
   nodes <- vector("list", length(top_k_idx))
 
   # build each node
-  for (i in seq_len(length(top_k_idx) - 1)) {
+  for (i in seq(from = 1, to = length(top_k_idx) - 1)) {
     # global gene index
     global_idx <- top_k_idx[i]
 
     # row of precision matrix for this node
-    row_i <- Omega_sub[i, i: length(top_k_idx)]
+    row_i <- Omega_sub[i, (i + 1): length(top_k_idx)]
 
     # indices of neighbors in the submatrix
     neigh_local <- which(row_i != 0) + i

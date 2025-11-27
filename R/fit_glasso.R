@@ -234,7 +234,13 @@ run_glasso_matrix_helper <- function(mat, nfeatures, rho) {
 #' @importFrom stats cov
 #' @export
 run_glasso <- function(x = NULL, nfeatures = 2000, rho = 0.1) {
-  auto_fit_glasso(x, nfeatures = 2000, rho = 0.1)
+  if (inherits(x, "Seurat")) {
+    return(run_glasso_seurat_helper(x, nfeatures = nfeatures, rho = rho))
+  }
+  if (is.matrix(x)) {
+    return(run_glasso_matrix_helper(x, nfeatures = nfeatures, rho = rho, ...))
+  }
+  stop("Input must be a Seurat object or a numeric cells×genes matrix.")
 }
 
 #' Fit graphical lasso on a Seurat object (with QC + default data)
@@ -299,7 +305,6 @@ fit_glasso <- function(obj = NULL,
   if (!inherits(obj, "Seurat")) {
     stop("fit_glasso() expects a Seurat object or NULL (to use example data).")
   }
-
   # QC + normalization
   obj <- preprocess_seurat_data(
     obj,
@@ -426,7 +431,7 @@ auto_fit_glasso <- function(x = NULL,
                             sf        = 10000,
                             nfeatures = 20,
                             rho       = 0.1) {
-  # Case 1: NULL or Seurat → use fit_glasso()
+  # # Case 1: NULL or Seurat → use fit_glasso()
   if (is.null(x) || inherits(x, "Seurat")) {
     return(
       fit_glasso(
@@ -442,22 +447,22 @@ auto_fit_glasso <- function(x = NULL,
     )
   }
 
-  # Case 2: raw matrix → use fit_glasso_raw()
-  if (is.matrix(x) && is.numeric(x)) {
-    return(
-      fit_glasso_raw(
-        mat        = x,
-        min_genes  = min_genes,
-        max_genes  = max_genes,
-        max_mt     = max_mt,
-        normalize  = normalize,
-        sf         = sf,
-        nfeatures  = nfeatures,
-        rho        = rho
-      )
-    )
-  }
-  stop("auto_fit_glasso(): input must be NULL, a Seurat object, or a numeric matrix.")
+  # # Case 2: raw matrix → use fit_glasso_raw()
+  # if (is.matrix(x) && is.numeric(x)) {
+  #   return(
+  #     fit_glasso_raw(
+  #       mat        = x,
+  #       min_genes  = min_genes,
+  #       max_genes  = max_genes,
+  #       max_mt     = max_mt,
+  #       normalize  = normalize,
+  #       sf         = sf,
+  #       nfeatures  = nfeatures,
+  #       rho        = rho
+  #     )
+  #   )
+  # }
+  # stop("auto_fit_glasso(): input must be NULL, a Seurat object, or a numeric matrix.")
 }
 
 

@@ -21,7 +21,7 @@ visnetwork_toggle_knock(
 \item{color_knocked}{Color for knocked nodes.}
 }
 \value{
-Updated visNetwork object.
+Updated GLgraph object.
 }
 \description{
 Toggle knock state of a node and update visNetwork graph
