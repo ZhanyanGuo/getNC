@@ -2,13 +2,12 @@ library(shiny)
 library(visNetwork)
 library(getNC)
 
-
 ui <- fluidPage(
   tags$head(tags$style(HTML("
       /* Sidebar styling */
       #sidebar {
         position: fixed;
-        top: 70px;        /* below the title */
+        top: 70px;
         left: 0;
         width: 260px;
         bottom: 0;
@@ -21,14 +20,13 @@ ui <- fluidPage(
 
       /* Main content area */
       #main_content {
-        margin-left: 280px; /* match sidebar width + padding */
+        margin-left: 280px;
         padding: 10px;
       }
   "))),
   
   titlePanel("Interactive Gene Network (GLgraph)"),
   
-  # Sidebar (fixed)
   div(
     id = "sidebar",
     h4("Settings"),
@@ -51,7 +49,6 @@ ui <- fluidPage(
     helpText("Leave empty to use the default dataset.")
   ),
   
-  # Main content
   div(
     id = "main_content",
     fluidRow(
@@ -60,17 +57,17 @@ ui <- fluidPage(
   )
 )
 
+
 server <- function(input, output, session) {
 
-  # -------------------------
-  # 1. Reactive data loading
+  # =====================================================
+  # 1. Load data (reactive)
+  # =====================================================
   data_reactive <- reactive({
 
     req(input$top_k)
 
-    # -------------------------
-    # Case 1: No file uploaded → use default data
-    # -------------------------
+    # Default case: no file uploaded
     if (is.null(input$data_file)) {
       result <- auto_fit_glasso(x = NULL)
 
@@ -78,17 +75,13 @@ server <- function(input, output, session) {
 
       ext <- tools::file_ext(input$data_file$name)
 
-      # -------------------------
-      # Case 2: CSV
-      # -------------------------
       if (ext == "csv") {
+
         mat <- as.matrix(read.csv(input$data_file$datapath, row.names = 1))
         result <- auto_fit_glasso(x = mat)
 
-      # -------------------------
-      # Case 3: RDS
-      # -------------------------
       } else if (ext == "rds") {
+
         obj <- readRDS(input$data_file$datapath)
 
         if (inherits(obj, "Seurat")) {
@@ -102,56 +95,67 @@ server <- function(input, output, session) {
           stop("RDS must contain a matrix or Seurat object.")
         }
 
-      # -------------------------
-      # Case 4: Unsupported file
-      # -------------------------
       } else {
-        stop("File type not supported.")
+        stop("Unsupported file type.")
       }
     }
 
-    # -------------------------
-    # Clamp top_k to valid range for this dataset
-    # -------------------------
+    # ----- clamp top_k safely -----
     k <- input$top_k
     gene_count <- length(result$features)
 
     if (k > gene_count) {
       updateNumericInput(session, "top_k", value = gene_count)
+      return(result)   # stop observer!
     }
-
     if (k < 1) {
       updateNumericInput(session, "top_k", value = 1)
+      return(result)   # stop observer!
     }
 
-    return(result)
+    result
   })
 
 
-  # -------------------------
-  # 2. Build GLgraph
-  # -------------------------
+  # =====================================================
+  # 2. Graph reactive
+  # =====================================================
   G_reactive <- reactiveVal(NULL)
 
   observeEvent(data_reactive(), {
-    req(data_reactive()) 
     fit <- data_reactive()
     k   <- input$top_k
-    G0  <- new_GLgraph(fit, k = k, target = 1)
-    G_reactive(G0)
+
+    # validate k again (race-condition safety)
+    k <- min(max(k, 1), length(fit$features))
+
+    G_reactive(new_GLgraph(fit, k, target = 1))
   })
 
   observeEvent(input$top_k, {
-    req(data_reactive()) 
+    req(data_reactive())
+
     fit <- data_reactive()
     k   <- input$top_k
-    G0  <- new_GLgraph(fit, k = k, target = 1)
-    G_reactive(G0)
+
+    # clamp again (critical)
+    gene_count <- length(fit$features)
+    if (k > gene_count) {
+      updateNumericInput(session, "top_k", value = gene_count)
+      return()
+    }
+    if (k < 1) {
+      updateNumericInput(session, "top_k", value = 1)
+      return()
+    }
+
+    G_reactive(new_GLgraph(fit, k, target = 1))
   })
 
-  # -------------------------
+
+  # =====================================================
   # 3. Render network
-  # -------------------------
+  # =====================================================
   output$network <- renderVisNetwork({
     req(G_reactive())
 
@@ -166,16 +170,19 @@ server <- function(input, output, session) {
       )
   })
 
-  # -------------------------
-  # 4. Node-click knockout toggle
-  # -------------------------
+
+  # =====================================================
+  # 4. Toggle knockout when node clicked
+  # =====================================================
   observeEvent(input$node_click, {
+    req(G_reactive())
+
     clicked <- input$node_click
 
-    G_reactive(
-      visnetwork_toggle_knock(G_reactive(), clicked)
-    )
+    # update G
+    G_reactive(visnetwork_toggle_knock(G_reactive(), clicked))
 
+    # redraw graph
     output$network <- renderVisNetwork({
       visnetwork_from_GLgraph(G_reactive()) %>%
         visNetwork::visEvents(
@@ -189,6 +196,5 @@ server <- function(input, output, session) {
     })
   })
 }
-
 
 shinyApp(ui, server)

@@ -294,7 +294,7 @@ get_top_k_gene_indices <- function(Sigma, genes, target, k) {
   # --- safety checks ---
   stopifnot(is.matrix(Sigma), is.numeric(Sigma))
   stopifnot(length(genes) == ncol(Sigma))
-  stopifnot(k >= 1, k <= length(genes))
+  k <- min(max(0, k), length(genes))
 
   # Convert target to indices
 
