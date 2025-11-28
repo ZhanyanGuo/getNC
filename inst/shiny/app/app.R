@@ -73,6 +73,16 @@ ui <- fluidPage(
   ),
 
   # ---------------- Main content ----------------
+  absolutePanel(
+    id = "density_panel",
+    top = 80, right = 20, width = 550, height = 500,
+    draggable = TRUE,
+    style = "background-color:white; border:1px solid #ccc; padding:10px; z-index:2000; overflow:auto;",
+    h4("Conditional Density Plots"),
+    plotlyOutput("density_mean", height = "220px"),
+    plotlyOutput("density_var", height = "220px")
+  ),
+
   div(
     id = "main_content",
     fluidRow(
@@ -268,6 +278,42 @@ server <- function(input, output, session) {
     print(compute_conditional()$cov_cond)
   })
 
+  density_reactive <- reactive({
+    req(G_reactive(), data_reactive())
+
+    fit <- data_reactive()
+    G   <- G_reactive()
+    target <- target_gene_reactive()
+    genes  <- fit$features
+
+    knocked_nodes <- vapply(G$nodes, function(n)
+      if (n$knocked) genes[n$index] else NA_character_,
+      character(1)
+    )
+    knocked_set <- knocked_nodes[!is.na(knocked_nodes)]
+
+    try({
+      plot_partner_knockout_densities_dual(
+        fit,
+        target = target,
+        knocked = knocked_set,
+        k = input$top_k,
+        use_original_units = TRUE
+      )
+    }, silent = TRUE)
+  })
+
+  output$density_mean <- renderPlotly({
+    d <- density_reactive()
+    if (is.null(d) || is.null(d$mean_plot)) return(NULL)
+    d$mean_plot
+  })
+
+  output$density_var <- renderPlotly({
+    d <- density_reactive()
+    if (is.null(d) || is.null(d$var_plot)) return(NULL)
+    d$var_plot
+  })
 }
 
 
