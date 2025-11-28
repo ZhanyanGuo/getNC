@@ -238,7 +238,7 @@ run_glasso <- function(x = NULL, nfeatures = 2000, rho = 0.1) {
     return(run_glasso_seurat_helper(x, nfeatures = nfeatures, rho = rho))
   }
   if (is.matrix(x)) {
-    return(run_glasso_matrix_helper(x, nfeatures = nfeatures, rho = rho, ...))
+    return(run_glasso_matrix_helper(x, nfeatures = nfeatures, rho = rho))
   }
   stop("Input must be a Seurat object or a numeric cells×genes matrix.")
 }
@@ -447,22 +447,22 @@ auto_fit_glasso <- function(x = NULL,
     )
   }
 
-  # # Case 2: raw matrix → use fit_glasso_raw()
-  # if (is.matrix(x) && is.numeric(x)) {
-  #   return(
-  #     fit_glasso_raw(
-  #       mat        = x,
-  #       min_genes  = min_genes,
-  #       max_genes  = max_genes,
-  #       max_mt     = max_mt,
-  #       normalize  = normalize,
-  #       sf         = sf,
-  #       nfeatures  = nfeatures,
-  #       rho        = rho
-  #     )
-  #   )
-  # }
-  # stop("auto_fit_glasso(): input must be NULL, a Seurat object, or a numeric matrix.")
+  # Case 2: raw matrix → use fit_glasso_raw()
+  if (is.matrix(x) && is.numeric(x)) {
+    return(
+      fit_glasso_raw(
+        mat        = x,
+        min_genes  = min_genes,
+        max_genes  = max_genes,
+        max_mt     = max_mt,
+        normalize  = normalize,
+        sf         = sf,
+        nfeatures  = nfeatures,
+        rho        = rho
+      )
+    )
+  }
+  stop("auto_fit_glasso(): input must be NULL, a Seurat object, or a numeric matrix.")
 }
 
 
