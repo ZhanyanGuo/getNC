@@ -539,6 +539,12 @@ zscore_matrix_with_params <- function(mat, nfeatures = 2000) {
   # rank genes by variance
   nfeatures <- min(nfeatures, ncol(mat))
   feats <- names(sort(gene_var, decreasing = TRUE))[1:nfeatures]
+  if (all(is.na(feats))) stop("No valid features after QC.")
+  submat <- mat[, feats, drop = FALSE]
+
+
+  nfeatures <- min(nfeatures, ncol(mat))
+  feats <- names(sort(gene_var, decreasing = TRUE))[1:nfeatures]
 
   submat <- mat[, feats, drop = FALSE]
 

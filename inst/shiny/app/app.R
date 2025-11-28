@@ -113,7 +113,11 @@ server <- function(input, output, session) {
 
         # FORCE numeric storage
         mode(mat) <- "numeric"   # or storage.mode(mat) <- "double"
-        result <- auto_fit_glasso(x = mat, nfeatures = input$glasso_features)
+        result <- auto_fit_glasso(x = mat,
+                                  nfeatures = input$glasso_features,
+                                  min_genes = 0)
+        #set min Gene to 0 for easer generate test data
+        showNotification("successfull load.", type="warning")
 
       } else if (ext == "rds") {
 
@@ -185,7 +189,6 @@ server <- function(input, output, session) {
     updateTextInput(session, "target_gene", value = genes[1])
 
     k <- min(max(input$top_k, 1), length(fit$features))
-
     G_reactive(new_GLgraph(fit, k, target = genes[1]))
   })
 
@@ -232,7 +235,6 @@ server <- function(input, output, session) {
   # 6. CONDITIONAL PREDICTION
   # =====================================================
   compute_conditional <- reactive({
-
     req(G_reactive())
     fit <- data_reactive()
     G   <- G_reactive()

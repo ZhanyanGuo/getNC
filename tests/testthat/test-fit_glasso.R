@@ -162,7 +162,7 @@ test_that("auto_fit_glasso dispatches raw matrix correctly", {
     min_genes = 0,
     max_genes = 1e6,
     max_mt    = 100,
-    nfeatures = 5,   # pick < ncol(mat) = 20
+    nfeatures = 5,
     rho       = 0.1
   )
 
