@@ -24,7 +24,7 @@ ui <- fluidPage(
       }
   "))),
 
-  titlePanel("Interactive Gene Network (GLgraph)"),
+  titlePanel("Click to select Knockouts from Network"),
 
   # ---------------- Sidebar ----------------
   div(
@@ -67,9 +67,9 @@ ui <- fluidPage(
 
     helpText("Leave empty to use the default dataset."),
 
-    h4("Conditional Prediction"),
-    verbatimTextOutput("cond_mean"),
-    verbatimTextOutput("cond_var")
+    h4("Knockout Prediction"),
+    verbatimTextOutput("mean"),
+    verbatimTextOutput("var")
   ),
 
   # ---------------- Main content ----------------
@@ -78,7 +78,7 @@ ui <- fluidPage(
     top = 80, right = 20, width = 550, height = 500,
     draggable = TRUE,
     style = "background-color:white; border:1px solid #ccc; padding:10px; z-index:2000; overflow:auto;",
-    h4("Conditional Density Plots"),
+    h4("Density Plots if Knockout One More"),
     plotlyOutput("density_mean", height = "220px"),
     plotlyOutput("density_var", height = "220px")
   ),
@@ -254,6 +254,8 @@ server <- function(input, output, session) {
 
     knocked_nodes <- vapply(G$nodes, function(n)
       if (n$knocked) genes[n$index] else NA_character_, character(1))
+    
+    if (all(is.na(knocked_nodes))) return(NULL)
 
     knocked_set <- knocked_nodes[!is.na(knocked_nodes)]
 
@@ -266,13 +268,13 @@ server <- function(input, output, session) {
     return(out)
   })
 
-  output$cond_mean <- renderPrint({
+  output$mean <- renderPrint({
     if (is.null(compute_conditional())) return("No result yet.")
     cat("Conditional Mean:\n")
     print(compute_conditional()$mean_cond)
   })
 
-  output$cond_var <- renderPrint({
+  output$var <- renderPrint({
     if (is.null(compute_conditional())) return("No result yet.")
     cat("Conditional Variance:\n")
     print(compute_conditional()$cov_cond)

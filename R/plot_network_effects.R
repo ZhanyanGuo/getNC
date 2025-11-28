@@ -242,7 +242,7 @@ plot_partner_knockout_densities_dual <- function(
     targ_name <- if (is.numeric(target)) genes[target] else target
     plotly::layout(
       p,
-      title = paste("Conditional density of", targ_name, title_suffix),
+      title = paste("density of", targ_name, title_suffix),
       scene = list(
         xaxis = list(title = paste0("Target ", targ_name)),
         yaxis = list(title = "Partner",
@@ -263,7 +263,7 @@ plot_partner_knockout_densities_dual <- function(
     m  = m_all[idx_mean],
     sd = sd_all[idx_mean],
     mag = abs(m_all[idx_mean]),                         # color by |mean|
-    title_suffix = "(top-K by |conditional mean|; color = |mean|)"
+    title_suffix = "(top-K means)"
   )
 
   # Top-K by variance
@@ -274,7 +274,7 @@ plot_partner_knockout_densities_dual <- function(
     m  = m_all[idx_var],
     sd = sd_all[idx_var],
     mag = v_all[idx_var],                               # color by variance
-    title_suffix = "(top-K by conditional variance; color = variance)"
+    title_suffix = "(top-K variance)"
   )
 
   list(mean_plot = mean_plot, var_plot = var_plot)
