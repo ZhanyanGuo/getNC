@@ -14,7 +14,7 @@ validate_knockout_group_from_fit(
 )
 }
 \arguments{
-\item{fit}{List from run_glasso_seurat()/fit_glasso() (needs $sigma, $features;
+\item{fit}{List from auto_fit_glasso()/fit_glasso() (needs $sigma, $features;
 for original units also needs $sd and optionally $mu).}
 
 \item{target}{Single gene (name or index) whose expression was measured.}
@@ -102,6 +102,6 @@ Fisher, R.A. (1924). "On a distribution yielding the error functions of
 several well known statistics." \emph{Proceedings of the ICM}, 2, 805–813.
 }
 \seealso{
-\code{\link{fit_glasso}}, \code{\link{run_glasso_seurat}},
+\code{\link{fit_glasso}}, \code{\link{auto_fit_glasso}},
 \code{\link{predict_knockout_from_fit}}, \code{\link{recover_covariance}}
 }

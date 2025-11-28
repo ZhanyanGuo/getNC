@@ -16,31 +16,148 @@ auto_fit_glasso(
 )
 }
 \arguments{
-\item{x}{A Seurat object, a numeric matrix, or NULL.}
+\item{x}{Either \code{NULL}, a Seurat object, or a numeric raw count matrix
+(rows = cells, columns = genes).}
 
-\item{min_genes}{Minimum genes per cell for QC.}
+\item{min_genes}{Minimum detected genes per cell for QC.}
 
-\item{max_genes}{Maximum genes per cell for QC.}
+\item{max_genes}{Maximum detected genes per cell.}
 
-\item{max_mt}{Maximum mitochondrial percent for QC.}
+\item{max_mt}{Maximum allowable mitochondrial percentage.}
 
-\item{normalize}{Whether to normalize data.}
+\item{normalize}{Logical; whether to run log-normalization.}
 
-\item{sf}{Scale factor for normalization.}
+\item{sf}{Scale factor used in normalization (default 10,000).}
 
-\item{nfeatures}{Number of variable genes for glasso.}
+\item{nfeatures}{Number of variable genes to use for glasso.}
 
-\item{rho}{Regularization parameter for glasso.}
+\item{rho}{L1 regularization parameter for \code{glasso::glasso()}.}
 }
 \value{
-Output of either \code{fit_glasso()} or \code{fit_glasso_raw()}.
+A list containing:
+\itemize{
+\item \code{omega} — precision matrix
+\item \code{sigma} — covariance matrix
+\item \code{mu} — gene means used for z-scoring
+\item \code{sd} — gene standard deviations
+\item \code{features} — selected variable genes
+\item \code{glasso} — raw glasso fit object
+\item \code{type} — \code{"seurat"} or \code{"matrix"}
+}
 }
 \description{
-This function detects whether the input is NULL, a Seurat object, or
-a raw count matrix (rows = cells, columns = genes), and calls the
-appropriate wrapper:
-\itemize{
-\item \code{fit_glasso()} for NULL or Seurat input
-\item \code{fit_glasso_raw()} for raw matrices
+\code{auto_fit_glasso()} is a high-level wrapper that detects whether the input
+is \code{NULL}, a \strong{Seurat object}, or a \strong{raw count matrix}, and then calls the
+corresponding pipeline:
 }
+\details{
+\itemize{
+\item \code{fit_glasso()} — for \code{NULL} or Seurat inputs
+\item \code{fit_glasso_raw()} — for raw matrices
+}
+
+This enables a unified interface for users who may start from:
+\itemize{
+\item a fully constructed Seurat workflow
+\item raw UMI counts (cells × genes)
+\item or simply want to run the included example dataset by supplying \code{NULL}
+}
+}
+\section{Accepted Input Formats}{
+
+
+\strong{1. \code{NULL}}
+If \code{x = NULL}, the function loads the package’s built-in small dataset
+(\code{pbmc_small}) using \code{fit_glasso()}.
+This matches Seurat’s own example behaviour for convenience.
+
+\strong{2. Seurat Object (\code{Seurat} class)}
+Must contain:
+\itemize{
+\item a raw count matrix in \code{RNA} assay
+\item optionally normalized data (if \code{normalize = TRUE}, it will be created)
+}
+
+Structure follows Seurat’s standard:
+\emph{Rows = genes}, \emph{Columns = cells}.
+(\code{CreateSeuratObject()} reference: Satija Lab / Seurat v5)
+
+\strong{3. Numeric Matrix}
+Must be a \strong{cells × genes} numeric matrix of raw UMI counts, matching the
+format used in Seurat v5 (\code{CreateSeuratObject(counts)} treats rows as cells).
+
+Each:
+\itemize{
+\item \strong{row = one cell}
+\item \strong{column = one gene}
+\item \strong{entry = raw UMI count}
+}
+
+This mirrors 10x Genomics raw counts and the Seurat \code{counts} slot structure.
+
+After QC and normalization, the matrix is passed to the matrix-based
+graphical lasso pipeline (\code{fit_glasso_raw()}).
+}
+
+\examples{
+\donttest{
+if (requireNamespace("Seurat", quietly = TRUE) &&
+    requireNamespace("glasso", quietly = TRUE)) {
+
+  ## -------------------------
+  ## Example 1: x = NULL
+  ## Loads internal pbmc_small dataset
+  ## -------------------------
+  res_null <- auto_fit_glasso(NULL, nfeatures = 30, rho = 0.2)
+  names(res_null)
+
+
+  ## -------------------------
+  ## Example 2: Seurat input
+  ## -------------------------
+  set.seed(1)
+  mat <- matrix(
+    rpois(1500, 6),
+    nrow = 50, ncol = 30,
+    dimnames = list(paste0("G", 1:50), paste0("C", 1:30))
+  )
+
+  so <- Seurat::CreateSeuratObject(mat)
+  so <- Seurat::NormalizeData(so)
+
+  res_seurat <- auto_fit_glasso(
+    so,
+    min_genes = 0,
+    nfeatures = 20,
+    rho = 0.15
+  )
+
+
+  ## -------------------------
+  ## Example 3: raw matrix input
+  ## -------------------------
+  mat_raw <- matrix(
+    rpois(2000, 4),
+    nrow = 40, ncol = 50,
+    dimnames = list(paste0("Cell", 1:40), paste0("Gene", 1:50))
+  )
+
+  res_mat <- auto_fit_glasso(
+    mat_raw,
+    min_genes = 0,
+    max_genes = 1e6,
+    max_mt    = 100,
+    nfeatures = 10,
+    rho       = 0.1
+  )
+}
+}
+
+}
+\references{
+Hao, Y. \emph{et al.} (2021). Integrated analysis of multimodal single-cell data.
+\emph{Cell}, 184(13):3573–3587.
+Friedman, J., Hastie, T., & Tibshirani, R. (2008).
+Sparse inverse covariance estimation with the graphical lasso.
+\emph{Biostatistics}, 9(3), 432–441.
 }

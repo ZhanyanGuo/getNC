@@ -72,7 +72,7 @@ gaussian_1d_group_pvals <- function(y, mu, var) {
 #'  - p_mean  : two-sided t test on the sample mean (using the sample sd)
 #'  - p_chisq : two-sided chi-square test on sum((y - mu_cond)^2 / var_cond)
 #'
-#' @param fit   List from run_glasso_seurat()/fit_glasso() (needs $sigma, $features;
+#' @param fit   List from auto_fit_glasso()/fit_glasso() (needs $sigma, $features;
 #'              for original units also needs $sd and optionally $mu).
 #' @param target  Single gene (name or index) whose expression was measured.
 #' @param knocked Character or integer vector of genes set to 0 in the experiment.
@@ -124,7 +124,7 @@ gaussian_1d_group_pvals <- function(y, mu, var) {
 #' }
 #'
 #' @seealso
-#'   \code{\link{fit_glasso}}, \code{\link{run_glasso_seurat}},
+#'   \code{\link{fit_glasso}}, \code{\link{auto_fit_glasso}},
 #'   \code{\link{predict_knockout_from_fit}}, \code{\link{recover_covariance}}
 #'
 #' @references

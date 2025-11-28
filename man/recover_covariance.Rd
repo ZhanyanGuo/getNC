@@ -8,7 +8,7 @@ recover_covariance(fit, renormalize = TRUE)
 }
 \arguments{
 \item{fit}{A list with components \code{sigma}, \code{sd}, and \code{features}
-as returned by \code{run_glasso()}.}
+as returned by \code{fit_glasso()}.}
 
 \item{renormalize}{Logical; if TRUE (default), first convert \code{fit$sigma}
 to an exact correlation matrix with \code{stats::cov2cor()} before scaling.}
@@ -40,6 +40,6 @@ dimnames(S_cov)
 Anderson, T.W. (2003) \emph{An Introduction to Multivariate Statistical Analysis} (3rd ed.). Wiley.
 }
 \seealso{
-\code{\link{predict_knockout_from_fit}}, \code{\link{run_glasso()}}
+\code{\link{predict_knockout_from_fit}}, \code{\link{fit_glasso}}
 }
 \keyword{internal}

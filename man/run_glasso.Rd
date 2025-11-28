@@ -32,9 +32,8 @@ A list with components:
 This unified wrapper automatically detects whether the input is a
 \code{Seurat} object or a raw count matrix with rows representing cells
 and columns representing genes. It applies the appropriate preprocessing
-pipeline (QC + normalization for raw matrices, variable feature
-selection + z-scoring for Seurat) before estimating a sparse precision
-matrix using the graphical lasso.
+pipeline (if raw the pipeline is Seurat independent) before estimating a
+sparse precision matrix using the graphical lasso.
 }
 \details{
 \strong{If the input is a Seurat object}

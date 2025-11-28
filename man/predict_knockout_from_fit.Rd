@@ -62,5 +62,5 @@ Mardia, K.V., Kent, J.T., & Bibby, J.M. (1979) \emph{Multivariate Analysis}. Aca
 }
 \seealso{
 \code{\link{predict_conditional_knockout}}, \code{\link{recover_covariance}},
-\code{\link{run_glasso()}}, \code{\link{fit_glasso}}
+\code{\link{auto_fit_glasso}}, \code{\link{fit_glasso}}
 }

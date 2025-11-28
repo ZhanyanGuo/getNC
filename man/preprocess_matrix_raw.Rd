@@ -2,7 +2,7 @@
 % Please edit documentation in R/fit_glasso.R
 \name{preprocess_matrix_raw}
 \alias{preprocess_matrix_raw}
-\title{Quality control + normalization for a raw count matrix (cells × genes)}
+\title{Quality control and normalization for a raw count matrix (cells × genes)}
 \usage{
 preprocess_matrix_raw(
   mat,
@@ -14,21 +14,97 @@ preprocess_matrix_raw(
 )
 }
 \arguments{
-\item{mat}{numeric matrix, cells × genes (raw counts)}
+\item{mat}{Numeric matrix with \strong{rows = cells} and \strong{columns = genes}.
+Must contain non-negative raw UMI counts.}
 
-\item{min_genes}{minimum detected genes per cell}
+\item{min_genes}{Minimum number of detected genes per cell.}
 
-\item{max_genes}{maximum detected genes per cell}
+\item{max_genes}{Maximum number of detected genes per cell.}
 
-\item{max_mt}{maximum mitochondrial percent (default 5)}
+\item{max_mt}{Maximum allowed mitochondrial percent (default: 5).}
 
-\item{normalize}{whether to normalize (default TRUE)}
+\item{normalize}{Logical; whether to apply library-size normalization
+followed by log1p (default: TRUE).}
 
-\item{sf}{scale factor for normalization (default 10000)}
+\item{sf}{Scale factor used for normalization (default: 10000).}
 }
 \value{
-a normalized log1p matrix (cells × genes)
+If \code{normalize = TRUE}:
+ A normalized \strong{log1p-transformed} matrix (cells × genes).
+
+If \code{normalize = FALSE}:
+ A QC-filtered \strong{raw} count matrix.
 }
 \description{
-Quality control + normalization for a raw count matrix (cells × genes)
+\code{preprocess_matrix_raw()} performs basic single-cell quality control and
+optional normalization on a raw UMI count matrix, following conventions used
+in Seurat (log-normalize) and Scanpy (library-size normalization + log1p).
+}
+\details{
+The function assumes the input matrix has:
+
+\strong{• rows = cells}
+\strong{• columns = genes}
+
+Each entry \eqn{m_{ij}} represents the raw UMI count for gene \emph{j} in cell \emph{i}.
+}
+\section{QC Metrics}{
+
+
+For each cell, the function computes:
+\itemize{
+\item \strong{Detected genes}: \code{ngenes = rowSums(mat > 0)}
+\item \strong{Library size}: \code{libsize = rowSums(mat)}
+\item \strong{Mitochondrial percent}:
+Computed using any column whose name matches \verb{^MT-}
+(10x Genomics & Seurat convention)
+}
+
+Cells are retained only if:
+\itemize{
+\item \code{ngenes > min_genes}
+\item \code{ngenes < max_genes}
+\item \code{percent_mt < max_mt}
+}
+}
+
+\section{Normalization}{
+
+
+If \code{normalize = TRUE}, the function performs:
+\enumerate{
+\item \strong{Library-size normalization}
+\deqn{ \tilde{m}_{ij} = \frac{m_{ij}}{\text{library size}_i} \times sf }
+\item \strong{Log1p transform}
+\deqn{ x_{ij} = \log(1 + \tilde{m}_{ij}) }
+}
+
+This matches the default behavior in Seurat:
+\code{NormalizeData(normalization.method = "LogNormalize", scale.factor = sf)}.
+}
+
+\examples{
+## Minimal reproducible example
+set.seed(1)
+mat <- matrix(
+  rpois(500, 5),
+  nrow = 25, ncol = 20,
+  dimnames = list(paste0("Cell", 1:25), paste0("Gene", 1:20))
+)
+
+# Add artificial MT genes
+colnames(mat)[1:3] <- c("MT-A", "MT-B", "MT-C")
+
+# Run QC + normalization
+mat_proc <- preprocess_matrix_raw(
+  mat,
+  min_genes = 0,
+  max_genes = 1000,
+  max_mt    = 100,
+  normalize = TRUE
+)
+
+dim(mat_proc)
+head(mat_proc[, 1:5])
+
 }

@@ -16,7 +16,7 @@ plot_partner_knockout_densities_dual(
 )
 }
 \arguments{
-\item{fit}{List from \code{run_glasso()}/\code{fit_glasso()} (needs \code{$sigma}, \code{$features};
+\item{fit}{List from \code{auto_fit_glasso()}/\code{fit_glasso()} (needs \code{$sigma}, \code{$features};
 for original units also needs \code{$sd}, and optionally \code{$mu}).}
 
 \item{target}{Single gene (name or index) to predict.}
@@ -76,5 +76,5 @@ Wiley.
 }
 \seealso{
 \code{\link{recover_covariance}}, \code{\link{predict_conditional_knockout}},
-\code{\link{run_glasso_seurat}}, \code{\link{fit_glasso}}
+\code{\link{auto_fit_glasso}}, \code{\link{fit_glasso}}
 }

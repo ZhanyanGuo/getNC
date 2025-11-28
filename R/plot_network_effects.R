@@ -104,7 +104,7 @@ sweep_partner_knockouts <- function(Sigma,
 #' \code{|conditional mean|} and top-K partners ranked by \code{conditional variance}.
 #' Colors encode the magnitude used for ranking (|mean| or variance respectively).
 #'
-#' @param fit List from \code{run_glasso()}/\code{fit_glasso()} (needs \code{$sigma}, \code{$features};
+#' @param fit List from \code{auto_fit_glasso()}/\code{fit_glasso()} (needs \code{$sigma}, \code{$features};
 #'   for original units also needs \code{$sd}, and optionally \code{$mu}).
 #' @param target Single gene (name or index) to predict.
 #' @param knocked Vector of already-knocked genes (names or indices).
@@ -143,7 +143,7 @@ sweep_partner_knockouts <- function(Sigma,
 #' }
 #'
 #' @seealso \code{\link{recover_covariance}}, \code{\link{predict_conditional_knockout}},
-#'   \code{\link{run_glasso_seurat}}, \code{\link{fit_glasso}}
+#'   \code{\link{auto_fit_glasso}}, \code{\link{fit_glasso}}
 #'
 #' @references
 #' C. Sievert (2020). \emph{Interactive Web-Based Data Visualization with R, plotly, and shiny}.
@@ -362,7 +362,6 @@ new_GLnode <- function(index, neighbours = integer(0), knocked = FALSE) {
 #'   Must contain: $sigma, $omega, $features.
 #' @param k Integer. Number of genes to include.
 #' @param target Gene name(s) or index(es).
-#' @param knocked_indices Optional vector of knocked gene indices.
 #'
 #' @return An object of class "GLgraph".
 #' @export

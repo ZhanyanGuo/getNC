@@ -5,16 +5,22 @@
 \alias{pbmc_small}
 \title{pbmc_small}
 \format{
-A Seurat object.
+gene-by-cell UMI count matrix (dgCMatrix)RDS-compressed sparse matrix
 }
 \source{
-Seurat vignettes sample dataset
+Seurat https://satijalab.org/seurat/articles/pbmc3k_tutorial
 }
 \usage{
 pbmc_small
 }
 \description{
-A tiny Seurat read10x readble single cell counting matrix for examples and tests.
+A dataset of Peripheral Blood Mononuclear Cells (PBMC)
+freely available from 10X Genomics.
+There are 2,700 single cells that were sequenced on the Illumina NextSeq 500.
+This is coming from the cellranger pipeline from 10X, returning a unique
+molecular identified (UMI) count matrix.
+For example dataset we take the first 1000 cells.
+For detailed generating step, see data-raw/pbmc10x.R
 }
 \references{
 Hao, Y. et al. (2021). Integrated analysis of multimodal single-cell data.

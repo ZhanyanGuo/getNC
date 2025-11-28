@@ -104,12 +104,12 @@ zscore_seurat_with_params <- function(obj, nfeatures = 2000) {
 
   z <- (mat - mu) / sd
 
-  list(
+  return(list(
     z        = z,
     mu       = mu,
     sd       = sd,
     features = feats
-  )
+  ))
 }
 
 #' @keywords internal
@@ -161,9 +161,8 @@ run_glasso_matrix_helper <- function(mat, nfeatures, rho) {
 #' This unified wrapper automatically detects whether the input is a
 #' \code{Seurat} object or a raw count matrix with rows representing cells
 #' and columns representing genes. It applies the appropriate preprocessing
-#' pipeline (QC + normalization for raw matrices, variable feature
-#' selection + z-scoring for Seurat) before estimating a sparse precision
-#' matrix using the graphical lasso.
+#' pipeline (if raw the pipeline is Seurat independent) before estimating a
+#' sparse precision matrix using the graphical lasso.
 #'
 #' @param x A Seurat object (already normalized) or a numeric matrix
 #'          with \strong{rows = cells} and \strong{columns = genes}.
@@ -322,7 +321,7 @@ fit_glasso <- function(obj = NULL,
     rho       = rho
   )
 
-  res
+  return(res)
 }
 
 #' Fit graphical lasso on a raw count matrix (cells × genes)
@@ -398,31 +397,144 @@ fit_glasso_raw <- function(mat,
     rho       = rho
   )
 
-  res
+  return(res)
 }
 
 #' Automatically dispatch to Seurat or raw-matrix graphical lasso
 #'
-#' This function detects whether the input is NULL, a Seurat object, or
-#' a raw count matrix (rows = cells, columns = genes), and calls the
-#' appropriate wrapper:
+#' `auto_fit_glasso()` is a high-level wrapper that detects whether the input
+#' is `NULL`, a **Seurat object**, or a **raw count matrix**, and then calls the
+#' corresponding pipeline:
+#'
+#' * `fit_glasso()` — for `NULL` or Seurat inputs
+#' * `fit_glasso_raw()` — for raw matrices
+#'
+#' This enables a unified interface for users who may start from:
 #' \itemize{
-#'   \item \code{fit_glasso()} for NULL or Seurat input
-#'   \item \code{fit_glasso_raw()} for raw matrices
+#'   \item a fully constructed Seurat workflow
+#'   \item raw UMI counts (cells × genes)
+#'   \item or simply want to run the included example dataset by supplying `NULL`
 #' }
 #'
-#' @param x A Seurat object, a numeric matrix, or NULL.
-#' @param min_genes Minimum genes per cell for QC.
-#' @param max_genes Maximum genes per cell for QC.
-#' @param max_mt Maximum mitochondrial percent for QC.
-#' @param normalize Whether to normalize data.
-#' @param sf Scale factor for normalization.
-#' @param nfeatures Number of variable genes for glasso.
-#' @param rho Regularization parameter for glasso.
+#' @section Accepted Input Formats:
 #'
-#' @return Output of either \code{fit_glasso()} or \code{fit_glasso_raw()}.
+#' **1. `NULL`**
+#' If `x = NULL`, the function loads the package’s built-in small dataset
+#' (`pbmc_small`) using `fit_glasso()`.
+#' This matches Seurat’s own example behaviour for convenience.
+#'
+#' **2. Seurat Object (`Seurat` class)**
+#' Must contain:
+#' \itemize{
+#'   \item a raw count matrix in `RNA` assay
+#'   \item optionally normalized data (if `normalize = TRUE`, it will be created)
+#' }
+#'
+#' Structure follows Seurat’s standard:
+#' *Rows = genes*, *Columns = cells*.
+#' (`CreateSeuratObject()` reference: Satija Lab / Seurat v5)
+#'
+#' **3. Numeric Matrix**
+#' Must be a **cells × genes** numeric matrix of raw UMI counts, matching the
+#' format used in Seurat v5 (`CreateSeuratObject(counts)` treats rows as cells).
+#'
+#' Each:
+#' \itemize{
+#'   \item **row = one cell**
+#'   \item **column = one gene**
+#'   \item **entry = raw UMI count**
+#' }
+#'
+#' This mirrors 10x Genomics raw counts and the Seurat `counts` slot structure.
+#'
+#' After QC and normalization, the matrix is passed to the matrix-based
+#' graphical lasso pipeline (`fit_glasso_raw()`).
+#'
+#' @param x Either `NULL`, a Seurat object, or a numeric raw count matrix
+#'          (rows = cells, columns = genes).
+#' @param min_genes Minimum detected genes per cell for QC.
+#' @param max_genes Maximum detected genes per cell.
+#' @param max_mt Maximum allowable mitochondrial percentage.
+#' @param normalize Logical; whether to run log-normalization.
+#' @param sf Scale factor used in normalization (default 10,000).
+#' @param nfeatures Number of variable genes to use for glasso.
+#' @param rho L1 regularization parameter for `glasso::glasso()`.
+#'
+#' @return
+#' A list containing:
+#' \itemize{
+#'   \item `omega` — precision matrix
+#'   \item `sigma` — covariance matrix
+#'   \item `mu` — gene means used for z-scoring
+#'   \item `sd` — gene standard deviations
+#'   \item `features` — selected variable genes
+#'   \item `glasso` — raw glasso fit object
+#'   \item `type` — `"seurat"` or `"matrix"`
+#' }
+#'
+#' @references
+#' Hao, Y. *et al.* (2021). Integrated analysis of multimodal single-cell data.
+#'     \emph{Cell}, 184(13):3573–3587.
+#' Friedman, J., Hastie, T., & Tibshirani, R. (2008).
+#'     Sparse inverse covariance estimation with the graphical lasso.
+#'     \emph{Biostatistics}, 9(3), 432–441.
+#'
+#' @examples
+#' \donttest{
+#' if (requireNamespace("Seurat", quietly = TRUE) &&
+#'     requireNamespace("glasso", quietly = TRUE)) {
+#'
+#'   ## -------------------------
+#'   ## Example 1: x = NULL
+#'   ## Loads internal pbmc_small dataset
+#'   ## -------------------------
+#'   res_null <- auto_fit_glasso(NULL, nfeatures = 30, rho = 0.2)
+#'   names(res_null)
+#'
+#'
+#'   ## -------------------------
+#'   ## Example 2: Seurat input
+#'   ## -------------------------
+#'   set.seed(1)
+#'   mat <- matrix(
+#'     rpois(1500, 6),
+#'     nrow = 50, ncol = 30,
+#'     dimnames = list(paste0("G", 1:50), paste0("C", 1:30))
+#'   )
+#'
+#'   so <- Seurat::CreateSeuratObject(mat)
+#'   so <- Seurat::NormalizeData(so)
+#'
+#'   res_seurat <- auto_fit_glasso(
+#'     so,
+#'     min_genes = 0,
+#'     nfeatures = 20,
+#'     rho = 0.15
+#'   )
+#'
+#'
+#'   ## -------------------------
+#'   ## Example 3: raw matrix input
+#'   ## -------------------------
+#'   mat_raw <- matrix(
+#'     rpois(2000, 4),
+#'     nrow = 40, ncol = 50,
+#'     dimnames = list(paste0("Cell", 1:40), paste0("Gene", 1:50))
+#'   )
+#'
+#'   res_mat <- auto_fit_glasso(
+#'     mat_raw,
+#'     min_genes = 0,
+#'     max_genes = 1e6,
+#'     max_mt    = 100,
+#'     nfeatures = 10,
+#'     rho       = 0.1
+#'   )
+#' }
+#' }
 #'
 #' @export
+
 auto_fit_glasso <- function(x = NULL,
                             min_genes = 200,
                             max_genes = 2500,
@@ -466,18 +578,89 @@ auto_fit_glasso <- function(x = NULL,
 }
 
 
-
-
-#' Quality control + normalization for a raw count matrix (cells × genes)
+#' Quality control and normalization for a raw count matrix (cells × genes)
 #'
-#' @param mat numeric matrix, cells × genes (raw counts)
-#' @param min_genes minimum detected genes per cell
-#' @param max_genes maximum detected genes per cell
-#' @param max_mt maximum mitochondrial percent (default 5)
-#' @param normalize whether to normalize (default TRUE)
-#' @param sf scale factor for normalization (default 10000)
+#' `preprocess_matrix_raw()` performs basic single-cell quality control and
+#' optional normalization on a raw UMI count matrix, following conventions used
+#' in Seurat (log-normalize) and Scanpy (library-size normalization + log1p).
 #'
-#' @return a normalized log1p matrix (cells × genes)
+#' The function assumes the input matrix has:
+#'
+#' **• rows = cells**  
+#' **• columns = genes**  
+#'
+#' Each entry \eqn{m_{ij}} represents the raw UMI count for gene *j* in cell *i*.
+#'
+#' @section QC Metrics:
+#'
+#' For each cell, the function computes:
+#'
+#' * **Detected genes**: `ngenes = rowSums(mat > 0)`  
+#' * **Library size**: `libsize = rowSums(mat)`  
+#' * **Mitochondrial percent**:  
+#'   Computed using any column whose name matches `^MT-`  
+#'   (10x Genomics & Seurat convention)
+#'
+#' Cells are retained only if:
+#' \itemize{
+#'   \item `ngenes > min_genes`
+#'   \item `ngenes < max_genes`
+#'   \item `percent_mt < max_mt`
+#' }
+#'
+#' @section Normalization:
+#'
+#' If `normalize = TRUE`, the function performs:
+#'
+#' 1. **Library-size normalization**  
+#'    \deqn{ \tilde{m}_{ij} = \frac{m_{ij}}{\text{library size}_i} \times sf }
+#'
+#' 2. **Log1p transform**  
+#'    \deqn{ x_{ij} = \log(1 + \tilde{m}_{ij}) }
+#'
+#' This matches the default behavior in Seurat:
+#' `NormalizeData(normalization.method = "LogNormalize", scale.factor = sf)`.
+#'
+#' @param mat Numeric matrix with **rows = cells** and **columns = genes**.
+#'            Must contain non-negative raw UMI counts.
+#' @param min_genes Minimum number of detected genes per cell.
+#' @param max_genes Maximum number of detected genes per cell.
+#' @param max_mt Maximum allowed mitochondrial percent (default: 5).
+#' @param normalize Logical; whether to apply library-size normalization
+#'        followed by log1p (default: TRUE).
+#' @param sf Scale factor used for normalization (default: 10000).
+#'
+#' @return  
+#' If `normalize = TRUE`:  
+#' A normalized **log1p-transformed** matrix (cells × genes).  
+#'
+#' If `normalize = FALSE`:  
+#' A QC-filtered **raw** count matrix.
+#'
+#' @examples
+#' ## Minimal reproducible example
+#' set.seed(1)
+#' mat <- matrix(
+#'   rpois(500, 5),
+#'   nrow = 25, ncol = 20,
+#'   dimnames = list(paste0("Cell", 1:25), paste0("Gene", 1:20))
+#' )
+#'
+#' # Add artificial MT genes
+#' colnames(mat)[1:3] <- c("MT-A", "MT-B", "MT-C")
+#'
+#' # Run QC + normalization
+#' mat_proc <- preprocess_matrix_raw(
+#'   mat,
+#'   min_genes = 0,
+#'   max_genes = 1000,
+#'   max_mt    = 100,
+#'   normalize = TRUE
+#' )
+#'
+#' dim(mat_proc)
+#' head(mat_proc[, 1:5])
+#'
 #' @export
 preprocess_matrix_raw <- function(mat,
                                   min_genes = 200,
@@ -528,7 +711,6 @@ preprocess_matrix_raw <- function(mat,
 #' @param nfeatures number of highly variable genes to select
 #'
 #' @return list(z, mu, sd, features)
-#' @export
 zscore_matrix_with_params <- function(mat, nfeatures = 2000) {
 
   stopifnot(is.matrix(mat), is.numeric(mat))

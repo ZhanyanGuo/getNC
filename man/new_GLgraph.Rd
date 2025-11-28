@@ -13,8 +13,6 @@ Must contain: $sigma, $omega, $features.}
 \item{k}{Integer. Number of genes to include.}
 
 \item{target}{Gene name(s) or index(es).}
-
-\item{knocked_indices}{Optional vector of knocked gene indices.}
 }
 \value{
 An object of class "GLgraph".

@@ -100,7 +100,7 @@ predict_conditional_knockout <- function(Sigma,
 #' and \eqn{R = \mathrm{cov2cor}(\text{sigma})}.
 #'
 #' @param fit A list with components \code{sigma}, \code{sd}, and \code{features}
-#'   as returned by \code{run_glasso()}.
+#'   as returned by \code{fit_glasso()}.
 #' @param renormalize Logical; if TRUE (default), first convert \code{fit$sigma}
 #'   to an exact correlation matrix with \code{stats::cov2cor()} before scaling.
 #'
@@ -118,7 +118,7 @@ predict_conditional_knockout <- function(Sigma,
 #' dimnames(S_cov)
 #' }
 #'
-#' @seealso \code{\link{predict_knockout_from_fit}}, \code{\link{run_glasso()}}
+#' @seealso \code{\link{predict_knockout_from_fit}}, \code{\link{fit_glasso}}
 #'
 #' @references
 #' Anderson, T.W. (2003) *An Introduction to Multivariate Statistical Analysis* (3rd ed.). Wiley.
@@ -182,7 +182,7 @@ recover_covariance <- function(fit, renormalize = TRUE) {
 #'}
 #' 
 #' @seealso \code{\link{predict_conditional_knockout}}, \code{\link{recover_covariance}},
-#'   \code{\link{run_glasso()}}, \code{\link{fit_glasso}}
+#'   \code{\link{auto_fit_glasso}}, \code{\link{fit_glasso}}
 #'
 #' @references
 #' Mardia, K.V., Kent, J.T., & Bibby, J.M. (1979) *Multivariate Analysis*. Academic Press.
