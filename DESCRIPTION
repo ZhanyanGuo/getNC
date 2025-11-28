@@ -1,9 +1,17 @@
 Package: getNC
-Title: What the Package Does (One Line, Title Case)
+Title: Gaussian Experiment Testing and Knockout Calculator
 Version: 0.0.0.9000
 Authors@R: 
-    person("First", "Last", , "first.last@example.com", role = c("aut", "cre"))
-Description: What the package does (one paragraph).
+    person("Zhanyan", "Guo", , "jamyanguo@gmail.com", role = c("aut", "cre"))
+Description: GetNC (Gaussian Experiment Testing and Knockout Calculator) is an 
+R package for modeling and validating gene regulatory relationships using 
+multivariate Gaussian inference. It fits sparse Gaussian graphical models from 
+single-cell expression data, predicts combinational knockout outcomes via 
+closed-form conditional Gaussian formulas, and validates model reliability 
+against observed perturbation experiments. GetNC bridges the gap between 
+network inference and biological validation — providing a mathematically 
+interpretable, simulation-free method to predict and assess perturbation 
+effects directly from fitted graphical models.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)

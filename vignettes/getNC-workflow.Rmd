@@ -20,6 +20,7 @@ knitr::opts_chunk$set(
 ```{r setup}
 library(getNC)
 ```
+
 # Purpose
 
 This vignette shows how to use **GetNC** to:
@@ -55,7 +56,7 @@ Validate with knockout experiment data for best `rho` in terms of prediction.[@f
 ```{r}
 fit <- auto_fit_glasso(
   x = NULL,      # replace with any UMI matrix as input data
-  nfeatures = 100,
+  nfeatures = 10, # low for vignette build, use higher number for accuracy
   rho = 0.2
 )
 
@@ -119,8 +120,11 @@ plots <- plot_partner_knockout_densities_dual(
 # To view Plots use
 # plots$mean_plot
 # plots$var_plot
+```
 
+```{r fig.align='center', out.width='60%'}
 knitr::include_graphics("figures/1.png")
+
 ```
 ---
 
@@ -229,10 +233,10 @@ This vignette is built partly with Chat-gpt 5 for term correction and formalizat
 
 ---
 
-# References
-
 # Session info
 
 ```{r}
 sessionInfo()
 ```
+
+# References
