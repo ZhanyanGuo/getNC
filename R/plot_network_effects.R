@@ -323,19 +323,16 @@ get_top_k_gene_indices <- function(Sigma, genes, target, k) {
   # Submatrix: correlations of all genes to target set
   v <- Sigma[, target_idx, drop = FALSE]
 
-  # For multi-target, use strongest absolute correlation
-  if (length(target_idx) > 1) {
-    assoc <- apply(v, 1, function(x) max(abs(x)))
-  } else {
-    assoc <- abs(v)
-  }
+  # Compute association strength: strongest absolute correlation to ANY target gene
+  assoc <- apply(v, 1, function(x) max(abs(x)))
 
+  # Rank by absolute correlation (descending)
   ranked <- order(assoc, decreasing = TRUE)
 
-  # Take the first k genes
-  top_k <- ranked[seq_len(k)]
+  # Take top k
+  top_k <- ranked[seq_len(min(k, length(ranked)))]
 
-  return(unique(top_k))
+  unique(top_k)
 }
 
 #' Create a GLnode object

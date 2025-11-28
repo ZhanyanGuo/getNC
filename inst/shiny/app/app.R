@@ -1,8 +1,31 @@
 library(shiny)
 library(visNetwork)
 library(getNC)
+library(plotly)
 
+# ---------- helper: info icon with bootstrap popover ----------
+label_with_info <- function(label, info) {
+  tags$span(
+    label,
+    tags$span(
+      icon("info-circle", class = "text-primary"),
+      style = "margin-left:6px; cursor:pointer;",
+      `data-toggle` = "popover",
+      `data-trigger` = "hover",
+      `data-container` = "body",
+      title = label,
+      `data-content` = info
+    )
+  )
+}
+
+# ================================================================
+#                             UI
+# ================================================================
 ui <- fluidPage(
+
+  # enable popovers
+  tags$script("$(function(){$('[data-toggle=\"popover\"]').popover();});"),
 
   tags$head(tags$style(HTML("
       #sidebar {
@@ -17,14 +40,13 @@ ui <- fluidPage(
         overflow-y: auto;
         z-index: 1000;
       }
-
       #main_content {
         margin-left: 280px;
         padding: 10px;
       }
   "))),
 
-  titlePanel("Click to select Knockouts from Network"),
+  titlePanel("Click to Select Knockouts"),
 
   # ---------------- Sidebar ----------------
   div(
@@ -34,34 +56,39 @@ ui <- fluidPage(
 
     numericInput(
       "glasso_features",
-      "Maximum genes for Glasso computation:",
-      value = 200,
-      min = 20,
-      max = 5000,
-      step = 10
+      label_with_info(
+        "Maximum genes for Glasso computation",
+        "Top variable genes chosen for sparse Gaussian graphical model estimation. Higher values give richer networks but cost more time."
+      ),
+      value = 200, min = 20, max = 5000, step = 10
     ),
 
     numericInput(
       "top_k",
-      "Number of genes to draw in network:",
-      value = 10,
-      min = 1,
-      max = 200,
-      step = 1
+      label_with_info(
+        "Number of genes to draw",
+        "The number of strongest absolute corrolated partner genes to display around the target in the network diagram."
+      ),
+      value = 10, min = 1, max = 200, step = 1
     ),
 
     textInput(
       "target_gene",
-      "Target gene:",
-      value = "",
-      placeholder = "Enter gene name"
+      label_with_info(
+        "Target gene",
+        "The gene whose conditional distribution and knockouts will be analyzed."
+      ),
+      value = "", placeholder = "Enter gene name"
     ),
 
     actionButton("apply_target", "Apply Target Gene"),
 
     fileInput(
       "data_file",
-      "Upload raw matrix / Seurat:",
+      label_with_info(
+        "Upload raw matrix / Seurat",
+        "Upload a CSV matrix (cells × genes) or a Seurat RDS object. Leave empty to use PBMC_small."
+      ),
       accept = c(".csv", ".rds")
     ),
 
@@ -72,62 +99,67 @@ ui <- fluidPage(
     verbatimTextOutput("var")
   ),
 
-  # ---------------- Main content ----------------
+  # ---------------- Floating Density Panel ----------------
   absolutePanel(
     id = "density_panel",
     top = 80, right = 20, width = 550, height = 500,
     draggable = TRUE,
     style = "background-color:white; border:1px solid #ccc; padding:10px; z-index:2000; overflow:auto;",
-    h4("Density Plots if Knockout One More"),
+    h4("Density Plots (One More Knockout)"),
     plotlyOutput("density_mean", height = "220px"),
     plotlyOutput("density_var", height = "220px")
   ),
 
+  # ---------------- Main content ----------------
   div(
     id = "main_content",
     fluidRow(
       visNetworkOutput("network", height = "700px")
     )
-  )
+  ),
+
+  tags$script(HTML("
+  $(document).ready(function(){
+    $('[data-toggle=\"popover\"]').popover(); 
+  });
+"))
+
 )
 
-
-
+# ================================================================
+#                           SERVER
+# ================================================================
 server <- function(input, output, session) {
 
-  # =====================================================
-  # 1. DATA & GLASSO FIT
-  # =====================================================
+  # --------------------------------------------------------------
+  # 1. DATA & GLASSO
+  # --------------------------------------------------------------
   data_reactive <- reactive({
-
     req(input$glasso_features)
 
     if (is.null(input$data_file)) {
-
+      # default dataset
       result <- auto_fit_glasso(
         x = NULL,
         nfeatures = input$glasso_features
       )
 
     } else {
-
       ext <- tools::file_ext(input$data_file$name)
 
       if (ext == "csv") {
-
-        df <- read.csv(input$data_file$datapath, 
-                        row.names = 1, 
-                        check.names = FALSE)
-
+        df <- read.csv(input$data_file$datapath,
+                       row.names = 1,
+                       check.names = FALSE)
         mat <- as.matrix(df)
+        mode(mat) <- "numeric"
 
-        # FORCE numeric storage
-        mode(mat) <- "numeric"   # or storage.mode(mat) <- "double"
-        result <- auto_fit_glasso(x = mat,
-                                  nfeatures = input$glasso_features,
-                                  min_genes = 0)
-        #set min Gene to 0 for easer generate test data
-        showNotification("successfull load.", type="warning")
+        result <- auto_fit_glasso(
+          x = mat,
+          nfeatures = input$glasso_features,
+          min_genes = 0   # easier for test data
+        )
+        showNotification("CSV loaded successfully.", type="message")
 
       } else if (ext == "rds") {
 
@@ -142,16 +174,12 @@ server <- function(input, output, session) {
         }
 
         result <- auto_fit_glasso(x = mat, nfeatures = input$glasso_features)
-
-      } else {
-        stop("Unsupported file type.")
       }
     }
 
-    # ensure glasso_features <= available available genes
+    # ensure top K fits #genes
     nf <- input$glasso_features
     gene_count <- length(result$features)
-
     if (nf > gene_count) {
       updateNumericInput(session, "glasso_features", value = gene_count)
     }
@@ -160,9 +188,9 @@ server <- function(input, output, session) {
   })
 
 
-  # =====================================================
-  # 2. VALID TARGET GENE — with APPLY BUTTON
-  # =====================================================
+  # --------------------------------------------------------------
+  # 2. TARGET GENE LOGIC
+  # --------------------------------------------------------------
   target_gene_reactive <- reactiveVal(NULL)
 
   observeEvent(input$apply_target, {
@@ -178,45 +206,39 @@ server <- function(input, output, session) {
 
     target_gene_reactive(tg)
 
-    # immediately rebuild graph with new target
-    k <- min(max(input$top_k, 1), length(fit$features))
+    k <- min(max(input$top_k, 1), length(genes))
     G_reactive(new_GLgraph(fit, k, target = tg))
   })
 
 
-  # =====================================================
-  # 3. GLgraph builder
-  # =====================================================
+  # --------------------------------------------------------------
+  # 3. GLgraph
+  # --------------------------------------------------------------
   G_reactive <- reactiveVal(NULL)
 
-  # new dataset loaded → build initial graph
   observeEvent(data_reactive(), {
     fit <- data_reactive()
-
-    # default target is first gene
     genes <- fit$features
     target_gene_reactive(genes[1])
     updateTextInput(session, "target_gene", value = genes[1])
 
-    k <- min(max(input$top_k, 1), length(fit$features))
+    k <- min(max(input$top_k, 1), length(genes))
     G_reactive(new_GLgraph(fit, k, target = genes[1]))
   })
 
-  # only top_k changed → update graph (same target)
   observeEvent(input$top_k, {
     req(data_reactive())
     fit <- data_reactive()
-
-    k <- min(max(input$top_k, 1), length(fit$features))
     tg <- target_gene_reactive()
+    k <- min(max(input$top_k, 1), length(fit$features))
 
     G_reactive(new_GLgraph(fit, k, target = tg))
   })
 
 
-  # =====================================================
-  # 4. Render network
-  # =====================================================
+  # --------------------------------------------------------------
+  # 4. Render Network
+  # --------------------------------------------------------------
   output$network <- renderVisNetwork({
     req(G_reactive())
 
@@ -232,40 +254,39 @@ server <- function(input, output, session) {
   })
 
 
-  # =====================================================
-  # 5. Toggle knockout state
-  # =====================================================
+  # --------------------------------------------------------------
+  # 5. Toggle Knockout
+  # --------------------------------------------------------------
   observeEvent(input$node_click, {
     req(G_reactive())
     G_reactive(visnetwork_toggle_knock(G_reactive(), input$node_click))
   })
 
 
-  # =====================================================
-  # 6. CONDITIONAL PREDICTION
-  # =====================================================
+  # --------------------------------------------------------------
+  # 6. Conditional Prediction
+  # --------------------------------------------------------------
   compute_conditional <- reactive({
     req(G_reactive())
     fit <- data_reactive()
     G   <- G_reactive()
-
+    genes <- fit$features
     target <- target_gene_reactive()
-    genes  <- fit$features
 
     knocked_nodes <- vapply(G$nodes, function(n)
-      if (n$knocked) genes[n$index] else NA_character_, character(1))
-    
+      if (n$knocked) genes[n$index] else NA_character_,
+      character(1))
+
     if (all(is.na(knocked_nodes))) return(NULL)
 
     knocked_set <- knocked_nodes[!is.na(knocked_nodes)]
 
-    out <- predict_knockout_from_fit(
+    predict_knockout_from_fit(
       fit,
       target = target,
       knocked = knocked_set,
       use_original_units = TRUE
     )
-    return(out)
   })
 
   output$mean <- renderPrint({
@@ -280,6 +301,10 @@ server <- function(input, output, session) {
     print(compute_conditional()$cov_cond)
   })
 
+
+  # --------------------------------------------------------------
+  # 7. Density Plots
+  # --------------------------------------------------------------
   density_reactive <- reactive({
     req(G_reactive(), data_reactive())
 
@@ -290,33 +315,31 @@ server <- function(input, output, session) {
 
     knocked_nodes <- vapply(G$nodes, function(n)
       if (n$knocked) genes[n$index] else NA_character_,
-      character(1)
-    )
+      character(1))
+
     knocked_set <- knocked_nodes[!is.na(knocked_nodes)]
 
-    try({
-      plot_partner_knockout_densities_dual(
-        fit,
-        target = target,
-        knocked = knocked_set,
-        k = input$top_k,
-        use_original_units = TRUE
-      )
-    }, silent = TRUE)
+    plot_partner_knockout_densities_dual(
+      fit,
+      target = target,
+      knocked = knocked_set,
+      k = input$top_k,
+      use_original_units = TRUE
+    )
   })
 
   output$density_mean <- renderPlotly({
     d <- density_reactive()
-    if (is.null(d) || is.null(d$mean_plot)) return(NULL)
+    if (is.null(d)) return(NULL)
     d$mean_plot
   })
 
   output$density_var <- renderPlotly({
     d <- density_reactive()
-    if (is.null(d) || is.null(d$var_plot)) return(NULL)
+    if (is.null(d)) return(NULL)
     d$var_plot
   })
 }
 
-
+# run app
 shinyApp(ui, server)
