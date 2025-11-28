@@ -138,7 +138,7 @@ run_glasso_matrix_helper <- function(mat, nfeatures, rho) {
 
   stopifnot(is.matrix(mat), is.numeric(mat))
 
-  # HVG + z-scoring (cells × genes)
+  # HVG + z-scoring (cells x genes)
   prep <- zscore_matrix_with_params(mat, nfeatures = nfeatures)
 
   # covariance across genes

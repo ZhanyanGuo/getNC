@@ -1,6 +1,9 @@
 ---
 title: "getNC-workflow"
+author: "Zhanyan Guo"
 output: rmarkdown::html_vignette
+bibliography: references.bib
+csl: nature.csl
 vignette: >
   %\VignetteIndexEntry{getNC-workflow}
   %\VignetteEngine{knitr::rmarkdown}
@@ -31,7 +34,7 @@ We keep the language simple and use a small example so the steps are clear.
 
 # Load package
 
-We recommend also having **Seurat**, **SeuratObject**, **glasso**, and **plotly** installed.
+We require also having **Seurat**, **SeuratObject**, **glasso**, and **plotly** installed.
 
 ```{r}
 suppressPackageStartupMessages({
@@ -45,10 +48,13 @@ suppressPackageStartupMessages({
 
 If `obj = NULL`, `fit_glasso()` uses a small dataset bundled with the package.  
 We keep `nfeatures` modest so it runs fast.
+Glasso is an algrithum to infer guassian model from data with lasso penalty applied,
+the lasso penalty controled by `rho` filters weak connections between genes.
+Validate with knockout experiment data for best `rho` in terms of prediction.[@friedman2008]
 
 ```{r}
-fit <- fit_glasso(
-  obj = NULL,      # use package example (e.g., pbmc_small)
+fit <- auto_fit_glasso(
+  x = NULL,      # replace with any UMI matrix as input data
   nfeatures = 100,
   rho = 0.2
 )
@@ -65,7 +71,9 @@ cat(sprintf("sigma dim: %d x %d\n", nrow(fit$sigma), ncol(fit$sigma)))
 
 We select one target gene and a set of knocked genes, and compute
 \( \mathbb{E}[\text{target}\mid \text{knocked}=0] \) and its conditional variance
-from the fitted Gaussian model.
+from the fitted Gaussian model. The result gives the estimated sample mean and 
+variance, when doing measuring RNA count of target gene in cells with the selected
+genes knocked.
 
 ```{r}
 genes   <- fit$features
@@ -75,7 +83,7 @@ knocked <- genes[c(3, 7, 9)]
 res <- predict_knockout_from_fit(
   fit,
   target = target,
-  knocked = knocked
+  knocked = knocked #both can be either index or gene name
 )
 
 mu_c  <- as.numeric(res$mean_cond[1])
@@ -92,9 +100,12 @@ cat(sprintf("Var[target | knocked=0] = %.4f\n", var_c))
 
 # Step 2 — Visualize partner knockouts (3D density)
 
-We look at partner genes. For each partner \(g\), we predict the target distribution
-under \(\{\text{knocked} \cup g\}\).  
-We show two plots: top-K partners by conditional **mean** and by conditional **variance**.
+We consider knocking out one additional gene. For each partner among all the unknocked gene \(g\), 
+we predict the target distribution under \(\{\text{knocked} \cup g\}\).  
+We show two plots: top-K partners ranked by highest target gene expression mean or variance, after
+the partner gene is added to the knockedout gene list.
+The 3D density plots follow techniques described in Sievert’s guide to interactive visualization
+with Plotly [@sievert2020].
 
 ```{r}
 plots <- plot_partner_knockout_densities_dual(
@@ -115,11 +126,16 @@ knitr::include_graphics("figures/1.png")
 
 # Step 3 — Validate with synthetic knockout measurements
 
-Now we simulate measurements for this same target and knockout set from the conditional
-Normal we just computed. We then do two group tests:
+For the cells with the hypothesis to have the modeled guassian gene network,
+Perform combinational knockedout on the selected genes, do RNA count for target gene only.
+The model predicts a normal distribution such experiment result will be.
+Here we simulate measurements for this same target and knockout set from the conditional
+distribution we just computed as a demostration. We then do two group tests:
 
 - a **t-test** on the mean (decoupled from model variance), and  
 - a **chi-square** test on variance.
+The t-test evaluates the possibility of the mean following our hypothesis.
+Chi-square test evaluates the possibility of both mean and variance following our hypothesis.
 
 ```{r}
 sd_c <- sqrt(max(var_c, 0))
@@ -145,9 +161,21 @@ cat(sprintf("  n (replicates)      = %d\n", val$n))
 
 - If we simulate from the model, p-values vary (roughly uniform).
 - A small `p_mean` suggests the **mean** is off.
-- A small `p_chisq` suggests the **variance** is off.
+- A small `p_chisq` suggests the either is off.
 
-You can try changing the data to see sensitivity
+# Step 4 — Browse Possible influece to Target using Interactive App
+
+An interactive app based on shiny is included in the package.
+
+The app visualizes the network and allows including knocked genes by 
+clicking. The above plot is also provided to see real time effect.
+To run the shiny app:
+
+```{r, eval=FALSE}
+run_getNC()
+
+```
+
 
 ---
 
@@ -192,12 +220,16 @@ In our knockout setting we take \(x_b = 0\).
 Marginalizing (taking only a subset) just selects the corresponding block of \(\mu\) and \(\Sigma\).
 For example, the marginal of \(X_a\) is \(\mathcal{N}(\mu_a, \Sigma_{aa})\).
 
+Matrix computations use sparse linear algebra via the Matrix package [@bates2023].
+
 ---
 
 # Generative AI usage
 This vignette is built partly with Chat-gpt 5 for term correction and formalization.
 
 ---
+
+# References
 
 # Session info
 
