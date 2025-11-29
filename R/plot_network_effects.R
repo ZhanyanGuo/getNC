@@ -95,7 +95,7 @@ sweep_partner_knockouts <- function(Sigma,
     vars[k]  <- unname(res$cov_cond[1, 1])
   }
 
-  list(mean = means, var = vars)
+  return(list(mean = means, var = vars))
 }
 
 #' 3D density plots from a glasso fit, ranked by mean and by variance (colored by magnitude)
@@ -277,7 +277,7 @@ plot_partner_knockout_densities_dual <- function(
     title_suffix = "(top-K variance)"
   )
 
-  list(mean_plot = mean_plot, var_plot = var_plot)
+  return(list(mean_plot = mean_plot, var_plot = var_plot))
 }
 
 #' Get indices of the top-k correlated genes (including if exist target gene(s))
@@ -332,7 +332,7 @@ get_top_k_gene_indices <- function(Sigma, genes, target, k) {
   # Take top k
   top_k <- ranked[seq_len(min(k, length(ranked)))]
 
-  unique(top_k)
+  return(unique(top_k))
 }
 
 #' Create a GLnode object
@@ -353,7 +353,7 @@ new_GLnode <- function(index, neighbours = integer(0), knocked = FALSE) {
     knocked    = knocked
   )
   class(node) <- "GLnode"
-  node
+  return(node)
 }
 
 #' Create a GLgraph object
@@ -493,12 +493,12 @@ visnetwork_from_GLgraph <- function(G,
   }
 
   # Construct and return the visNetwork graph
-  visNetwork::visNetwork(nodes_df, edges_df) %>%
+  return(visNetwork::visNetwork(nodes_df, edges_df) %>%
     visNetwork::visLayout(randomSeed = 1) %>%
     visNetwork::visOptions(
       highlightNearest = FALSE,
       nodesIdSelection = TRUE
-    )
+    ))
 }
 
 #' Toggle knock state of a node and update visNetwork graph
@@ -534,7 +534,7 @@ visnetwork_toggle_knock <- function(G, clicked,
   G$nodes[[idx]]$knocked <- !G$nodes[[idx]]$knocked
 
   # return the updated G
-  G
+  return(G)
 }
 
 

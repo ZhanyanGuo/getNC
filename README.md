@@ -23,7 +23,10 @@ devtools::install_github("ZhanyanGuo/getNC", build_vignettes = TRUE)
 library("getNC")
 ```
 
-To run the Shiny app: *Under construction.*
+To run the Shiny app: 
+```r
+run_getNC()
+```
 
 ---
 
@@ -38,14 +41,27 @@ browseVignettes("getNC")
 ```
 
 ### Core user functions
+Note: Major functions are intergrated steps. Helper functions are selected middle steps provided for the user if data at smaller stage is needed.
 
-| Function                                 | Purpose                                                                                |
-| ---------------------------------------- | -------------------------------------------------------------------------------------- |
-| `fit_glasso()`                           | Fit sparse Gaussian graphical model from gene expression data (using graphical lasso). |
-| `predict_conditional_knockout()`         | Compute conditional mean and variance for a target gene given knockout set.            |
-| `predict_knockout_from_fit()`            | Wrapper for conditional prediction using a fitted `fit_glasso()` object.               |
-| `plot_partner_knockout_densities_dual()` | Generate 3D Gaussian density plots for top-K mean/variance partners.                   |
-| `validate_knockout_group_from_fit()`     | Statistical validation of model predictions using observed knockout replicates.        |
+| Function                                 | Stage         | Type   | Description                                  |
+| ---------------------------------------- | ------------- | ------ | -------------------------------------------- |
+| `auto_fit_glasso()`                      | Model fitting | Major  | Detect input type and run glasso pipeline    |
+| `fit_glasso()`                           | Model fitting | Major  | Fit glasso from Seurat or default dataset    |
+| `fit_glasso_raw()`                       | Model fitting | Major  | Fit glasso from raw numeric matrix           |
+| `run_glasso()`                           | Model fitting | Helper | Internal graphical lasso computation         |
+| `new_GLgraph()`                          | Visualization | Helper  | Build GLgraph object for interactive network |
+| `new_GLnode()`                           | Visualization | Helper | Construct node objects (state, index, gene)  |
+| `visnetwork_from_GLgraph()`              | Visualization | Helper | Convert GLgraph to visNetwork plot           |
+| `visnetwork_toggle_knock()`              | Visualization | Helper | Toggle knockout state from network click     |
+| `predict_conditional_knockout()`         | Inference     | Major  | Closed-form conditional mean/variance        |
+| `predict_knockout_from_fit()`            | Inference     | Major  | Wrapper to predict knockouts from fit        |
+| `sweep_partner_knockouts()`              | Inference     | Helper | Compute top-K partner effects                |
+| `plot_partner_knockout_densities_dual()` | Visualization | Major  | 3D density plots of partner knockouts        |
+| `validate_knockout_group_from_fit()`     | Validation    | Major  | Mean/variance tests for real perturbations   |
+| `preprocess_matrix_raw()`                | Preprocess    | Helper | QC + normalization for raw matrices          |
+| `preprocess_seurat_data()`               | Preprocess    | Helper | Extract & preprocess Seurat raw counts       |
+| `pbmc_small`                             | Preprocess    | Data   | Example dataset                              |
+| `run_getNC()`                            | App           | Major  | Launch interactive Shiny UI                  |
 
 ### Workflow diagram
 
@@ -109,10 +125,12 @@ browseVignettes("getNC")
 ## Acknowledgements
 
 This package was developed as part of an assessment for the **2025 BCB410H: Applied Bioinformatics** course
-at the **University of Toronto, Toronto, CANADA**.
+at the **University of Toronto, Toronto, CANADA**. Supervised by Dr. Anjali Silva
 
 **GetNC** welcomes issues, enhancement requests, and contributions.
 To submit an issue, please use the **GitHub Issues** page.
+
+Idea of this package is also inspired and motivated by author's ongoing research project supervised by Dr. Shu Wang at Donnely Center, University of Toronto.
 
 ---
 

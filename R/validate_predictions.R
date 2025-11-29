@@ -61,7 +61,7 @@ gaussian_1d_group_pvals <- function(y, mu, var) {
     p_chisq <- min(1, max(0, p_chisq))
   }
 
-  c(p_mean = p_mean, p_chisq = p_chisq)
+  return(c(p_mean = p_mean, p_chisq = p_chisq))
 }
 
 #' Group tests for a knockout using a glasso-style fit (1D target)
@@ -182,7 +182,7 @@ validate_knockout_group_from_fit <- function(
   tgt_name <- if (is.numeric(target)) genes[target] else as.character(target)
   knocked_names <- if (is.numeric(knocked)) genes[knocked] else as.character(knocked)
 
-  list(
+  return(list(
     target    = tgt_name,
     knocked   = knocked_names,
     mean_cond = mu_c,
@@ -190,7 +190,7 @@ validate_knockout_group_from_fit <- function(
     p_mean    = unname(pv["p_mean"]),
     p_chisq   = unname(pv["p_chisq"]),
     n         = length(as.numeric(y))
-  )
+  ))
 }
 
 # Gen Ai used for documentation and input verify

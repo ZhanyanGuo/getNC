@@ -139,7 +139,7 @@ recover_covariance <- function(fit, renormalize = TRUE) {
 
   S_cov <- D %*% R %*% D
   dimnames(S_cov) <- list(fit$features, fit$features)
-  S_cov
+  return(S_cov)
 }
 
 #' Predict conditional mean/covariance from a glasso-style fit
@@ -214,13 +214,13 @@ predict_knockout_from_fit <- function(fit,
   genes <- fit$features
   mu    <- if (!is.null(fit$mu)) fit$mu else rep(0, length(genes))
 
-  predict_conditional_knockout(
+  return(predict_conditional_knockout(
     Sigma  = Sigma,
     genes  = genes,
     target = target,
     knocked = knocked,
     mu     = mu
-  )
+  ))
 }
 
 # Gen Ai used for documentation and input verify

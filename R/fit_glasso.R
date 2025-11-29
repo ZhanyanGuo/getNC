@@ -122,7 +122,7 @@ run_glasso_seurat_helper <- function(obj, nfeatures, rho) {
   S    <- stats::cov(t(zmat))        # covariance across genes
   fit  <- glasso::glasso(S, rho = rho)
 
-  list(
+  return(list(
     omega    = fit$wi,
     sigma    = fit$w,
     mu       = prep$mu,
@@ -130,7 +130,7 @@ run_glasso_seurat_helper <- function(obj, nfeatures, rho) {
     features = prep$features,
     glasso   = fit,
     type     = "seurat"
-  )
+  ))
 }
 
 #' @keywords internal
@@ -145,7 +145,7 @@ run_glasso_matrix_helper <- function(mat, nfeatures, rho) {
   S <- stats::cov(prep$z)
   fit <- glasso::glasso(S, rho = rho)
 
-  list(
+  return(list(
     omega    = fit$wi,
     sigma    = fit$w,
     mu       = prep$mu,
@@ -153,7 +153,7 @@ run_glasso_matrix_helper <- function(mat, nfeatures, rho) {
     features = prep$features,
     glasso   = fit,
     type     = "matrix"
-  )
+  ))
 }
 
 #' Run Graphical Lasso on a Seurat Object or Raw Count Matrix
@@ -702,7 +702,7 @@ preprocess_matrix_raw <- function(mat,
   # log1p to log the variance for numeric stability
   mat_log <- log1p(mat_norm)
 
-  mat_log
+  return(mat_log)
 }
 
 #' Variable gene selection & Z-scoring for raw matrix
@@ -741,12 +741,12 @@ zscore_matrix_with_params <- function(mat, nfeatures = 2000) {
   z <- sweep(submat, 2L, mu, "-")
   z <- sweep(z,      2L, sd, "/")
 
-  list(
+  return(list(
     z        = z,
     mu       = mu,
     sd       = sd,
     features = feats
-  )
+  ))
 }
 
 # Gen AI used for documentation and input verify
